@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, type CardInput } from '../api';
 import { COLORS, ICON_GROUPS } from '../icons';
+import { today } from '../dates';
 import { useSession } from '../session';
 import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart } from '../types';
 
@@ -44,19 +45,20 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
   const [time, setTime] = useState(initial?.time ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [points, setPoints] = useState(initial?.points ?? 0);
+  const [onBoard, setOnBoard] = useState(!!initial?.planned_date);
   const [plannedDate, setPlannedDate] = useState(initial?.planned_date ?? '');
-  const [dayPart, setDayPart] = useState<DayPart | ''>(initial?.day_part ?? '');
+  const [dayPart, setDayPart] = useState<DayPart>(initial?.day_part ?? 'namiddag');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return setError('Geef de kaart een naam');
-    if (!!plannedDate !== !!dayPart) return setError('Kies een dag én een dagdeel, of laat beide leeg');
+    if (onBoard && !plannedDate) return setError('Kies op welke dag de kaart komt');
     setBusy(true); setError('');
     const body: Partial<CardInput> = {
       title: title.trim(), icon, color, deadline: deadline || null, time: time || null, notes,
-      plannedDate: plannedDate || null, dayPart: (dayPart || null) as DayPart | null,
+      plannedDate: onBoard ? plannedDate : null, dayPart: onBoard ? dayPart : null,
       ...(isParent ? { points } : {}),
     };
     try {
@@ -83,24 +85,32 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
       <label>Kleur</label>
       <ColorPicker value={color} onChange={setColor} />
       <div className="row">
-        <label>Moet af vóór
+        <label>Deadline: moet af vóór (optioneel)
           <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
         </label>
         <label>Tijd (optioneel)
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </label>
       </div>
-      <div className="row">
-        <label>Op welke dag? (leeg = op de stapel)
-          <input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} />
-        </label>
-      </div>
+      <label>Waar komt de kaart?</label>
       <div className="segmented">
-        <button type="button" className={dayPart === '' ? 'on' : ''} onClick={() => setDayPart('')}>🧲 Stapel</button>
-        {DAY_PARTS.map((p) => (
-          <button type="button" key={p} className={dayPart === p ? 'on' : ''} onClick={() => setDayPart(p)}>{DAY_PART_LABEL[p].icon} {DAY_PART_LABEL[p].label}</button>
-        ))}
+        <button type="button" className={!onBoard ? 'on' : ''} onClick={() => setOnBoard(false)}>🧲 Op de stapel (zelf plannen)</button>
+        <button type="button" className={onBoard ? 'on' : ''} onClick={() => { setOnBoard(true); if (!plannedDate) setPlannedDate(deadline || today()); }}>📅 Meteen op een dag</button>
       </div>
+      {onBoard && (
+        <>
+          <div className="row">
+            <label>Welke dag
+              <input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} />
+            </label>
+          </div>
+          <div className="segmented">
+            {DAY_PARTS.map((p) => (
+              <button type="button" key={p} className={dayPart === p ? 'on' : ''} onClick={() => setDayPart(p)}>{DAY_PART_LABEL[p].icon} {DAY_PART_LABEL[p].label}</button>
+            ))}
+          </div>
+        </>
+      )}
       {isParent && (
         <label>Punten (0 = geen)
           <input type="number" min={0} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} />
