@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type CardInput } from '../api';
 import { COLORS, ICON_GROUPS } from '../icons';
 import { today } from '../dates';
 import { useSession } from '../session';
-import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart } from '../types';
+import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart, type Profile } from '../types';
 
 interface Props {
   profileId: number;
+  /** Bestaande kaart bewerken. */
   initial?: Card;
+  /** Nieuwe kaart maken met deze kaart als voorbeeld (kopie). */
+  template?: Card;
   onSaved: (card: Card) => void;
   onCancel: () => void;
 }
@@ -35,19 +38,25 @@ export function ColorPicker({ value, onChange }: { value: string; onChange: (v: 
   );
 }
 
-export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
+export function CardForm({ profileId, initial, template, onSaved, onCancel }: Props) {
   const me = useSession()!.profile;
   const isParent = me.role === 'parent';
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [icon, setIcon] = useState(initial?.icon ?? '📚');
-  const [color, setColor] = useState(initial?.color ?? COLORS[0]);
-  const [deadline, setDeadline] = useState(initial?.deadline ?? '');
-  const [time, setTime] = useState(initial?.time ?? '');
-  const [notes, setNotes] = useState(initial?.notes ?? '');
-  const [points, setPoints] = useState(initial?.points ?? 0);
-  const [onBoard, setOnBoard] = useState(!!initial?.planned_date);
-  const [plannedDate, setPlannedDate] = useState(initial?.planned_date ?? '');
-  const [dayPart, setDayPart] = useState<DayPart>(initial?.day_part ?? 'namiddag');
+  const base = initial ?? template;
+  const [forId, setForId] = useState(profileId);
+  const [kids, setKids] = useState<Profile[]>([]);
+  const [title, setTitle] = useState(base?.title ?? '');
+  const [icon, setIcon] = useState(base?.icon ?? '📚');
+  const [color, setColor] = useState(base?.color ?? COLORS[0]);
+  const [deadline, setDeadline] = useState(base?.deadline ?? '');
+  const [time, setTime] = useState(base?.time ?? '');
+  const [notes, setNotes] = useState(base?.notes ?? '');
+  const [points, setPoints] = useState(isParent ? base?.points ?? 0 : 0);
+  const [onBoard, setOnBoard] = useState(!!base?.planned_date);
+  const [plannedDate, setPlannedDate] = useState(base?.planned_date ?? '');
+  const [dayPart, setDayPart] = useState<DayPart>(base?.day_part ?? 'namiddag');
+  useEffect(() => {
+    if (isParent && !initial) api.profiles().then((ps) => setKids(ps.filter((k) => k.role === 'kid'))).catch(() => undefined);
+  }, [isParent, initial]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -64,7 +73,7 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
     try {
       const saved = initial
         ? await api.updateCard(initial.id, body)
-        : await api.createCard({ ...(body as CardInput), profileId });
+        : await api.createCard({ ...(body as CardInput), profileId: forId });
       onSaved(saved);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er ging iets mis');
@@ -75,8 +84,16 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
     <form className="form" onSubmit={submit}>
       <div className="panel-head">
         <span className="icon" style={{ background: color }}>{icon}</span>
-        <h2>{initial ? 'Kaart aanpassen' : 'Nieuwe kaart'}</h2>
+        <h2>{initial ? 'Kaart aanpassen' : template ? 'Kopie maken' : 'Nieuwe kaart'}</h2>
       </div>
+      {isParent && !initial && kids.length > 1 && (
+        <>
+          <label>Voor wie</label>
+          <div className="segmented">
+            {kids.map((k) => <button type="button" key={k.id} className={k.id === forId ? 'on' : ''} onClick={() => setForId(k.id)}>{k.avatar} {k.name}</button>)}
+          </div>
+        </>
+      )}
       <label>Wat ga je doen?
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Bijv. huiswerk rekenen" autoFocus maxLength={80} />
       </label>
@@ -84,14 +101,9 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
       <IconPicker value={icon} onChange={setIcon} />
       <label>Kleur</label>
       <ColorPicker value={color} onChange={setColor} />
-      <div className="row">
-        <label>Deadline: moet af vóór (optioneel)
-          <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
-        </label>
-        <label>Tijd (optioneel)
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </label>
-      </div>
+      <label>Deadline: moet af vóór (optioneel)
+        <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+      </label>
       <label>Waar komt de kaart?</label>
       <div className="segmented">
         <button type="button" className={!onBoard ? 'on' : ''} onClick={() => setOnBoard(false)}>🧲 Op de stapel (zelf plannen)</button>
@@ -102,6 +114,9 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
           <div className="row">
             <label>Welke dag
               <input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} />
+            </label>
+            <label>Hoe laat (optioneel)
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </label>
           </div>
           <div className="segmented">
@@ -122,7 +137,7 @@ export function CardForm({ profileId, initial, onSaved, onCancel }: Props) {
       {error && <div className="error">{error}</div>}
       <div className="actions" style={{ display: 'flex', gap: 10 }}>
         <button type="button" className="btn" onClick={onCancel} style={{ flex: 1 }}>Annuleren</button>
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 2 }}>{initial ? 'Opslaan' : 'Toevoegen'}</button>
+        <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 2 }}>{initial ? 'Opslaan' : template ? 'Kopie toevoegen' : 'Toevoegen'}</button>
       </div>
     </form>
   );

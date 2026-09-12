@@ -23,6 +23,7 @@ export function CardPanel({ card, onClose, onChanged }: Props) {
   const canEdit = isParent || card.created_by === me.id;
   const status = cardStatus(card);
   const [editing, setEditing] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [error, setError] = useState('');
 
   async function run(fn: () => Promise<unknown>, after?: () => void) {
@@ -34,6 +35,8 @@ export function CardPanel({ card, onClose, onChanged }: Props) {
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         {editing ? (
           <CardForm profileId={card.profile_id} initial={card} onSaved={() => { onChanged(); onClose(); }} onCancel={() => setEditing(false)} />
+        ) : copying ? (
+          <CardForm profileId={card.profile_id} template={card} onSaved={() => { onChanged(); onClose(); }} onCancel={() => setCopying(false)} />
         ) : (
           <>
             <div className="panel-head">
@@ -61,6 +64,7 @@ export function CardPanel({ card, onClose, onChanged }: Props) {
               {status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
               {card.planned_date && <button className="btn" onClick={() => run(() => api.moveCard(card.id, null, null))}>🧲 Terug op de stapel</button>}
               {canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
+              <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>
               {canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: '1 1 100%' }}>Sluiten</button>
             </div>
