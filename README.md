@@ -1,0 +1,92 @@
+# Planner
+
+Speelse weekplanner voor kinderen, self-hosted. Ouders zetten taken met een deadline
+op de stapel, de kinderen slepen ze zelf naar een dagdeel, vinken af, sparen punten
+en wisselen die in. Draait als één container op het thuisnetwerk; werkt op iPad,
+computer en als wanddashboard.
+
+Ontwerp: `docs/superpowers/specs/2026-09-12-kinderplanner-design.md`.
+
+![Weekbord](docs/screenshots/weekbord.png)
+
+Meer schermen in `docs/screenshots/`.
+
+## Starten (Docker, bijv. in een LXC op Proxmox)
+
+```bash
+git clone <repo> planner && cd planner
+docker compose up -d --build
+```
+
+Open `http://<host>:3000`. De database staat in `./data/planner.db`.
+
+Eerste keer: profielen Sepp, Liz, Papa en Mama staan klaar. De ouder-pincode is
+`1234`; wijzig die via Ouderpaneel → Gezin → ✏️.
+
+## Op de iPad als app
+
+Open de site in Safari → Delen → **Zet op beginscherm**. De planner opent dan
+zonder browserbalken. Voor het wanddashboard: open `http://<host>:3000/#/overzicht`
+(alleen-lezen, ververst zichzelf elke minuut, geen login).
+
+## Ontwikkelen
+
+```bash
+cd backend && npm install && npm run dev      # API op :3000, database in backend/data/
+cd frontend && npm install && npm run dev     # UI op :5173, proxied naar :3000
+cd backend && npm test                        # 55 tests, in-memory SQLite
+```
+
+Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
+
+## Home Assistant
+
+Publiek leesbare endpoints, geen token nodig:
+
+- `GET /api/kids/:id/summary` → `{name, balance, streak, todayTotal, todayDone, pendingApprovals}`
+- `GET /api/overview?date=YYYY-MM-DD` → kaarten van die dag per kind
+
+Voorbeeld REST-sensor in `configuration.yaml`:
+
+```yaml
+rest:
+  - resource: http://planner.lan:3000/api/kids/1/summary
+    scan_interval: 300
+    sensor:
+      - name: "Sepp punten"
+        value_template: "{{ value_json.balance }}"
+      - name: "Sepp vandaag klaar"
+        value_template: "{{ value_json.todayDone }}/{{ value_json.todayTotal }}"
+      - name: "Sepp streak"
+        value_template: "{{ value_json.streak }}"
+```
+
+## API in het kort
+
+Alles onder `/api`, JSON. Inloggen met `POST /login {profileId, pin?}` geeft een
+token voor `Authorization: Bearer`. (O) = alleen ouders.
+
+| Route | Doel |
+|---|---|
+| `GET /profiles` | gezinsleden (publiek, zonder pins) |
+| `POST/PATCH/DELETE /profiles` (O) | gezin beheren |
+| `GET /kids/:id/week?start=maandag` | weekbord: geplande kaarten, stapel, saldo, streak |
+| `POST /cards`, `PATCH /cards/:id`, `DELETE /cards/:id` | kaart maken, verplaatsen, bewerken |
+| `POST /cards/:id/done` `/undone` | afvinken |
+| `POST /cards/:id/approve` `/reject` (O) | punten goedkeuren |
+| `GET/POST/PATCH/DELETE /recurrences` (O) | wekelijkse items |
+| `GET /rewards`, `POST/PATCH/DELETE /rewards` (O) | winkeltje |
+| `POST /redemptions {rewardId}` | kind wisselt in |
+| `POST /redemptions/:id/approve` `/deny` (O) | inwisselen afhandelen |
+| `GET /approvals` (O) | alles wat wacht op een ouder |
+| `GET /overview?date=` | dagoverzicht alle kinderen (publiek) |
+| `GET /kids/:id/summary` | cijfers voor Home Assistant (publiek) |
+
+## Regels
+
+- Een kind ziet en beweegt alleen eigen kaarten. Kaarten van een ouder mag het
+  kind verplaatsen en afvinken, niet aanpassen of weggooien.
+- Punten geeft alleen een ouder. Afvinken van een kaart met punten wacht op een ✓
+  van een ouder; zonder punten telt het direct.
+- Streak: dagen op rij waarop alles wat gepland stond ook is afgevinkt.
+- Inwisselen reserveert punten tot een ouder goedkeurt of afwijst.

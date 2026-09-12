@@ -54,8 +54,10 @@ zijn altijd samen gezet of samen leeg.
 **Recurrence** — sjabloon. `id, profile_id, title, icon, color, points,
 weekdays (json array 1..7, 1 = ma), day_part, time, active, created_by`.
 Bij het laden van een week worden ontbrekende instanties als gewone kaarten
-aangemaakt (`recurrence_id` gezet). Daarna gedragen ze zich als losse kaarten:
-verschuiven, afvinken, verwijderen voor die ene dag.
+aangemaakt (`recurrence_id` en `origin_date` gezet; uniek per herhaling en
+oorsprongsdag, zodat een verschoven instantie niet opnieuw ontstaat). Daarna
+gedragen ze zich als losse kaarten: verschuiven, afvinken, en verwijderen voor
+die ene dag (`skipped = 1`, zodat hij niet terugkomt).
 
 **Reward** — `id, title, icon, cost, active`.
 

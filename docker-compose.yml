@@ -1,0 +1,10 @@
+services:
+  planner:
+    build: .
+    image: planner:latest
+    container_name: planner
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
