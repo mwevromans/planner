@@ -42,12 +42,13 @@ create table if not exists cards(
   notes text not null default '',
   created_by integer not null,
   recurrence_id integer references recurrences(id) on delete set null,
+  origin_date text,
   skipped integer not null default 0,
   done_at text,
   approved_at text,
   approved_by integer,
   created_at text not null default (datetime('now')),
-  unique(recurrence_id, planned_date)
+  unique(recurrence_id, origin_date)
 );
 create table if not exists rewards(
   id integer primary key,

@@ -4,6 +4,7 @@ import type { Db } from './db.js';
 import { PlannerError } from './types.js';
 import { profileRoutes } from './routes/profiles.js';
 import { cardRoutes } from './routes/cards.js';
+import { weekAndRecurrenceRoutes } from './routes/recurrences.js';
 
 export function createApp(db: Db) {
   const app = express();
@@ -11,6 +12,7 @@ export function createApp(db: Db) {
 
   app.use('/api', profileRoutes(db));
   app.use('/api', cardRoutes(db));
+  app.use('/api', weekAndRecurrenceRoutes(db));
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Niet gevonden' }));
 

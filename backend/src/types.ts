@@ -29,6 +29,8 @@ export interface Card {
   notes: string;
   created_by: number;
   recurrence_id: number | null;
+  /** Dag waarvoor deze herhalings-instantie oorspronkelijk is aangemaakt; blijft staan bij verplaatsen. */
+  origin_date: string | null;
   skipped: number;
   done_at: string | null;
   approved_at: string | null;
