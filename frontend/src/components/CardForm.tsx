@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type CardInput } from '../api';
 import { COLORS, ICON_GROUPS } from '../icons';
 import { today } from '../dates';
+import { TimePicker } from './TimePicker';
 import { useSession } from '../session';
 import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart, type Profile } from '../types';
 
@@ -115,10 +116,9 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
             <label>Welke dag
               <input type="date" value={plannedDate} onChange={(e) => setPlannedDate(e.target.value)} />
             </label>
-            <label>Hoe laat (optioneel)
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </label>
           </div>
+          <label>Hoe laat (optioneel)</label>
+          <TimePicker value={time} onChange={setTime} />
           <div className="segmented">
             {DAY_PARTS.map((p) => (
               <button type="button" key={p} className={dayPart === p ? 'on' : ''} onClick={() => setDayPart(p)}>{DAY_PART_LABEL[p].icon} {DAY_PART_LABEL[p].label}</button>

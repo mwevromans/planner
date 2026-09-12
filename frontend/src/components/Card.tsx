@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { deadlineLabel } from '../dates';
 import type { Card } from '../types';
+import { AnalogClock } from './AnalogClock';
 
 export function cardStatus(card: Card): 'open' | 'wait' | 'done' {
   if (!card.done_at) return 'open';
@@ -39,7 +40,7 @@ export function CardInner({ card, showDeadline = true }: { card: Card; showDeadl
       <span className="body">
         <span className="title">{card.title}</span>
         <span className="meta">
-          {card.time && <span>🕒 {card.time}</span>}
+          {card.time && <span className="clock"><AnalogClock time={card.time} size={16} />{card.time}</span>}
           {dl && <span className={dl.late ? 'late' : ''}>{dl.late ? '⚠️ ' : '📅 '}{dl.text}</span>}
           {card.points > 0 && <span>⭐ {card.points}</span>}
         </span>

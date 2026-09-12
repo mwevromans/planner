@@ -3,6 +3,7 @@ import { api, type RecurrenceInput } from '../../api';
 import { go } from '../../App';
 import { Avatar } from '../../components/Avatar';
 import { CardForm, ColorPicker, IconPicker } from '../../components/CardForm';
+import { TimePicker } from '../../components/TimePicker';
 import { COLORS } from '../../icons';
 import { DOW } from '../../dates';
 import { DAY_PARTS, DAY_PART_LABEL, type DayPart, type Profile, type Recurrence } from '../../types';
@@ -104,10 +105,9 @@ function RecurrenceForm({ profileId, initial, onDone }: { profileId: number; ini
       <div className="weekday-picker">{DOW.map((d, i) => <button type="button" key={d} className={weekdays.includes(i + 1) ? 'on' : ''} onClick={() => toggle(i + 1)}>{d}</button>)}</div>
       <label>Dagdeel</label>
       <div className="segmented">{DAY_PARTS.map((p) => <button type="button" key={p} className={dayPart === p ? 'on' : ''} onClick={() => setDayPart(p)}>{DAY_PART_LABEL[p].icon} {DAY_PART_LABEL[p].label}</button>)}</div>
-      <div className="row">
-        <label>Tijd (optioneel)<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
-        <label>Punten<input type="number" min={0} value={points} onChange={(e) => setPoints(Number(e.target.value))} /></label>
-      </div>
+      <label>Hoe laat (optioneel)</label>
+      <TimePicker value={time} onChange={setTime} />
+      <label>Punten<input type="number" min={0} value={points} onChange={(e) => setPoints(Number(e.target.value))} /></label>
       <label style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Actief</label>
       {error && <div className="error">{error}</div>}
       <div style={{ display: 'flex', gap: 10 }}>

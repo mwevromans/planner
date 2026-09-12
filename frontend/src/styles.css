@@ -209,3 +209,13 @@ h1, h2, h3 { margin: 0; }
 .overview .kid-head .chips { margin-left: auto; display: flex; gap: 8px; }
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: white; padding: 12px 20px; border-radius: 999px; font-weight: 800; z-index: 100; box-shadow: var(--shadow); }
+
+/* Tijdkiezer */
+.timepicker { display: flex; align-items: center; gap: 16px; }
+.timepicker-fields { display: flex; flex-direction: column; gap: 8px; }
+.timepicker-selects { display: flex; align-items: center; gap: 6px; }
+.timepicker-selects select { padding: 10px 12px; border-radius: 14px; border: 2px solid var(--line); background: #fffdf5; font-size: 22px; font-weight: 800; -webkit-appearance: none; appearance: none; text-align: center; min-width: 72px; }
+.timepicker-colon { font-size: 24px; font-weight: 800; }
+.card .meta .clock { display: inline-flex; align-items: center; gap: 4px; }
+.card .meta .clock svg { width: 16px; height: 16px; }
+.density-simple .card .meta .clock svg, .card.big .meta .clock svg { width: 22px; height: 22px; }
