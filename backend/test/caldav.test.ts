@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../src/db.js';
-import { configFromEnv, dayPartFor, icsToEvents, parseCalendars, resolveTargets, routeByTag, storeEvents, syncRange } from '../src/services/caldav.js';
+import { configFromEnv, dayPartFor, defaultIcon, icsToEvents, parseCalendars, resolveTargets, routeByTag, storeEvents, syncRange } from '../src/services/caldav.js';
 import { listProfiles } from '../src/services/profiles.js';
 import { appWith, as, loginAs, testDb } from './helpers.js';
 
@@ -170,5 +170,57 @@ describe('opslag en weergave', () => {
     const st = await papa.get('/api/sync/status');
     expect(st.body).toMatchObject({ configured: false, count: 0, calendars: [] });
     expect((await papa.post('/api/sync/now')).status).toBe(409);
+  });
+});
+
+describe('geïmporteerde afspraken: kleur, icoon, afvinken', () => {
+  it('kleur van het bord, standaardicoon op trefwoord, icoon-override per titel, afvinken en ongedaan maken', async () => {
+    storeEvents(db, [
+      { uid: 'v', profileId: 1, title: 'Voetbaltraining', date: '2026-09-14', dayPart: 'avond', time: '18:30', allDay: false, location: '' },
+      { uid: 'v', profileId: 1, title: 'Voetbaltraining', date: '2026-09-16', dayPart: 'avond', time: '18:30', allDay: false, location: '' },
+      { uid: 'x', profileId: 1, title: 'Iets onbekends', date: '2026-09-15', dayPart: 'ochtend', time: null, allDay: true, location: '' },
+    ], RANGE);
+    const app = appWith(db);
+    const sepp = as(app, await loginAs(app, 'Sepp'));
+    const liz = as(app, await loginAs(app, 'Liz'));
+    const w = () => sepp.get('/api/kids/1/week?start=2026-09-14').then((r) => r.body.cards as any[]);
+    let cards = await w();
+    expect(cards.every((c) => c.color === '#7dd3fc')).toBe(true); // Sepp is blauw
+    expect(cards.find((c) => c.title === 'Voetbaltraining').icon).toBe('⚽');
+    expect(cards.find((c) => c.title === 'Iets onbekends').icon).toBe('📅');
+    const first = cards.find((c) => c.title === 'Voetbaltraining');
+    // icoon aanpassen geldt voor alle Voetbaltraining-kaarten
+    expect((await sepp.patch(`/api/cards/${first.id}`, { icon: '🥅' })).body.icon).toBe('🥅');
+    cards = await w();
+    expect(cards.filter((c) => c.title === 'Voetbaltraining').map((c) => c.icon)).toEqual(['🥅', '🥅']);
+    // andere velden niet toegestaan
+    expect((await sepp.patch(`/api/cards/${first.id}`, { title: 'X' })).status).toBe(400);
+    // afvinken
+    const d = await sepp.post(`/api/cards/${first.id}/done`);
+    expect(d.status).toBe(200);
+    expect(d.body.done_at).toBeTruthy();
+    expect(d.body.needsApproval).toBe(false);
+    expect((await w()).find((c) => c.id === first.id).done_at).toBeTruthy();
+    expect((await sepp.post(`/api/cards/${first.id}/undone`)).body.done_at).toBeNull();
+    // ander kind mag niet
+    expect((await liz.post(`/api/cards/${first.id}/done`)).status).toBe(403);
+    expect((await sepp.post('/api/cards/-99999/done')).status).toBe(404);
+  });
+  it('afvinken overleeft een nieuwe sync (zelfde uid en datum)', async () => {
+    storeEvents(db, [{ uid: 'v', profileId: 1, title: 'Voetbaltraining', date: '2026-09-14', dayPart: 'avond', time: '18:30', allDay: false, location: '' }], RANGE);
+    const app = appWith(db);
+    const sepp = as(app, await loginAs(app, 'Sepp'));
+    const id = (await sepp.get('/api/kids/1/week?start=2026-09-14')).body.cards[0].id;
+    await sepp.post(`/api/cards/${id}/done`);
+    storeEvents(db, [{ uid: 'v', profileId: 1, title: 'Voetbaltraining', date: '2026-09-14', dayPart: 'avond', time: '18:30', allDay: false, location: '' }], RANGE);
+    expect((await sepp.get('/api/kids/1/week?start=2026-09-14')).body.cards[0].done_at).toBeTruthy();
+  });
+  it('defaultIcon', () => {
+    expect(defaultIcon('Keeperstraining', false)).toBe('⚽');
+    expect(defaultIcon('Tandarts controle', false)).toBe('🦷');
+    expect(defaultIcon('Oma Bep oppassen', true)).toBe('👵');
+    expect(defaultIcon('Boesjer', false)).toBe('🗓️');
+    expect(defaultIcon('Sportschool Rick', false)).toBe('🏃');
+    expect(defaultIcon('Studiedag school', true)).toBe('🏫');
   });
 });

@@ -27,7 +27,7 @@ export const api = {
 
   week: (kidId: number, start: string) => call<WeekView>('GET', `/kids/${kidId}/week?start=${start}`),
   createCard: (c: CardInput) => call<Card>('POST', '/cards', c),
-  updateCard: (id: number, c: Partial<CardInput>) => call<Card>('PATCH', `/cards/${id}`, c),
+  updateCard: (id: number, c: Partial<CardInput> | { icon: string }) => call<Card>('PATCH', `/cards/${id}`, c),
   moveCard: (id: number, plannedDate: string | null, dayPart: DayPart | null) => call<Card>('PATCH', `/cards/${id}`, { plannedDate, dayPart }),
   deleteCard: (id: number) => call<void>('DELETE', `/cards/${id}`),
   done: (id: number) => call<Card & { needsApproval: boolean }>('POST', `/cards/${id}/done`),

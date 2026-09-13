@@ -5,7 +5,7 @@ import { deadlineLabel, longDate } from '../dates';
 import { useSession } from '../session';
 import { DAY_PART_LABEL, type Card } from '../types';
 import { cardStatus } from './Card';
-import { CardForm } from './CardForm';
+import { CardForm, IconPicker } from './CardForm';
 
 interface Props {
   card: Card;
@@ -19,8 +19,9 @@ export function celebrate() {
   confetti({ particleCount: 140, spread: 80, origin: { y: 0.7 }, scalar: 1.1 });
 }
 
-export function CardPanel({ card, onClose, onChanged, readOnly: readOnlyProp = false }: Props) {
-  const readOnly = readOnlyProp || !!card.source;
+export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props) {
+  const external = !!card.source;
+  const [pickingIcon, setPickingIcon] = useState(false);
   const me = useSession()!.profile;
   const isParent = me.role === 'parent';
   const canEdit = isParent || card.created_by === me.id;
@@ -61,17 +62,24 @@ export function CardPanel({ card, onClose, onChanged, readOnly: readOnlyProp = f
             {card.notes && <p style={{ whiteSpace: 'pre-wrap', fontWeight: 600 }}>{card.notes}</p>}
             {error && <div className="error" style={{ marginBottom: 10 }}>{error}</div>}
             <div className="actions">
-              {readOnly && card.source && <div className="status wait" style={{ flex: '1 1 100%' }}> Deze afspraak komt uit de Apple-agenda. Aanpassen doe je daar.</div>}
-              {readOnly && !card.source && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
+              {readOnly && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
+              {external && !readOnly && <div className="muted" style={{ flex: '1 1 100%', fontWeight: 700, fontSize: 14 }}> Uit de Apple-agenda: tijd en titel pas je daar aan. Hier kun je afvinken en het icoontje kiezen.</div>}
+              {external && !readOnly && pickingIcon && (
+                <div style={{ flex: '1 1 100%' }}>
+                  <IconPicker value={card.icon} onChange={(ic) => run(() => api.updateCard(card.id, { icon: ic }), () => setPickingIcon(false))} />
+                </div>
+              )}
               {!readOnly && status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
-              {!readOnly && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
-              {!readOnly && status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}
-              {!readOnly && status === 'done' && !isParent && card.points === 0 && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
-              {!readOnly && status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
-              {!readOnly && card.planned_date && <button className="btn" onClick={() => run(() => api.moveCard(card.id, null, null))}>🧲 Terug op de stapel</button>}
-              {!readOnly && canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
-              {!readOnly && <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>}
-              {!readOnly && canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
+              {!readOnly && external && status === 'done' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && external && <button className="btn" onClick={() => setPickingIcon((v) => !v)}>{pickingIcon ? 'Icoontje sluiten' : '🎨 Icoontje kiezen'}</button>}
+              {!readOnly && !external && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && !external && status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}
+              {!readOnly && !external && status === 'done' && !isParent && card.points === 0 && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && !external && status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
+              {!readOnly && !external && card.planned_date && <button className="btn" onClick={() => run(() => api.moveCard(card.id, null, null))}>🧲 Terug op de stapel</button>}
+              {!readOnly && !external && canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
+              {!readOnly && !external && <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>}
+              {!readOnly && !external && canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: '1 1 100%' }}>Sluiten</button>
             </div>
           </>

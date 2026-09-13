@@ -2,7 +2,8 @@ import ical, { type VEvent as IcalVEvent } from 'node-ical';
 import { createDAVClient } from 'tsdav';
 import type { Db } from '../db.js';
 import { addDays, nowIso, today, weekStart } from '../dates.js';
-import type { Card, DayPart, Profile } from '../types.js';
+import { PlannerError, type Card, type DayPart, type Profile } from '../types.js';
+import { isParent } from '../auth.js';
 
 export const TZ = process.env.PLANNER_TZ ?? 'Europe/Amsterdam';
 
@@ -200,17 +201,68 @@ export function storeEvents(db: Db, events: ExternalEvent[], range: Range): void
   } catch (err) { db.exec('rollback'); throw err; }
 }
 
-/** Externe afspraken als alleen-lezen kaarten (negatieve id, source 'apple'). */
+const ICON_RULES: [RegExp, string][] = [
+  [/voetbal|keeper/i, '⚽'], [/zwem/i, '🏊'], [/dans/i, '💃'], [/turn|gym/i, '🤸'], [/volleybal/i, '🏐'], [/hockey/i, '🏑'],
+  [/tennis/i, '🎾'], [/judo|karate/i, '🥋'], [/fiets|wieler/i, '🚴'], [/tandarts|orthodont/i, '🦷'], [/dokter|arts|huisarts|controle|ziekenhuis/i, '🩺'],
+  [/logopedie/i, '🗣️'], [/kapper/i, '💇'], [/verjaardag|jarig|feest/i, '🎂'], [/\bschool|studiedag|oudergesprek/i, '🏫'], [/bso|opvang/i, '🎒'],
+  [/vakantie/i, '🏖️'], [/oppas/i, '👵'], [/zwemles/i, '🏊'], [/muziek|piano|gitaar|drum/i, '🎵'], [/eten|restaurant|diner/i, '🍽️'],
+  [/vergadering|overleg|werk/i, '💼'], [/sport|fit|training/i, '🏃'], [/spelen|speel/i, '🧸'], [/bieb|bibliotheek|lezen/i, '📚'],
+];
+
+/** Standaardicoon op basis van trefwoorden in de titel; anders een agenda-icoon. */
+export function defaultIcon(title: string, allDay: boolean): string {
+  for (const [re, icon] of ICON_RULES) if (re.test(title)) return icon;
+  return allDay ? '📅' : '🗓️';
+}
+
+/** Externe afspraken als kaarten (negatieve id, source 'apple'): kleur van het bord, eigen icoon, afvinkbaar. */
 export function externalCards(db: Db, profileId: number, from: string, toExclusive: string): (Card & { source: 'apple' })[] {
+  const color = (db.prepare('select color from profiles where id=?').get(profileId) as { color: string } | undefined)?.color ?? '#e0e7ff';
   const rows = db
-    .prepare('select * from external_events where profile_id=? and date >= ? and date < ? order by date, time is null, time, id')
-    .all(profileId, from, toExclusive) as unknown as { id: number; uid: string; title: string; date: string; day_part: DayPart; time: string | null; all_day: number; location: string }[];
+    .prepare(
+      `select e.*, i.icon as icon_override, d.done_at as done_at
+       from external_events e
+       left join external_icons i on i.profile_id = e.profile_id and i.title = e.title
+       left join external_done d on d.profile_id = e.profile_id and d.uid = e.uid and d.date = e.date
+       where e.profile_id=? and e.date >= ? and e.date < ? order by e.date, e.time is null, e.time, e.id`,
+    )
+    .all(profileId, from, toExclusive) as unknown as {
+      id: number; uid: string; title: string; date: string; day_part: DayPart; time: string | null; all_day: number; location: string;
+      icon_override: string | null; done_at: string | null;
+    }[];
   return rows.map((r) => ({
-    id: -r.id, profile_id: profileId, title: r.title, icon: r.all_day ? '📅' : '🗓️', color: '#e0e7ff', points: 0,
+    id: -r.id, profile_id: profileId, title: r.title, icon: r.icon_override ?? defaultIcon(r.title, !!r.all_day), color, points: 0,
     deadline: null, planned_date: r.date, day_part: r.day_part, time: r.time, notes: r.location, created_by: 0,
-    recurrence_id: null, origin_date: null, skipped: 0, done_at: null, approved_at: null, approved_by: null,
+    recurrence_id: null, origin_date: null, skipped: 0, done_at: r.done_at, approved_at: null, approved_by: null,
     created_at: '', source: 'apple' as const,
   }));
+}
+
+type ExternalRow = { id: number; uid: string; profile_id: number; title: string; date: string };
+
+export function getExternal(db: Db, negativeId: number): ExternalRow {
+  const row = db.prepare('select id, uid, profile_id, title, date from external_events where id=?').get(-negativeId) as ExternalRow | undefined;
+  if (!row) throw new PlannerError(404, 'Afspraak niet gevonden');
+  return row;
+}
+
+export function setExternalDone(db: Db, user: Profile, negativeId: number, done: boolean): Card {
+  const row = getExternal(db, negativeId);
+  if (!isParent(user) && row.profile_id !== user.id) throw new PlannerError(403, 'Dat is niet jouw bord');
+  if (done) {
+    db.prepare('insert or replace into external_done(profile_id, uid, date, done_at) values (?,?,?,?)').run(row.profile_id, row.uid, row.date, nowIso());
+  } else {
+    db.prepare('delete from external_done where profile_id=? and uid=? and date=?').run(row.profile_id, row.uid, row.date);
+  }
+  return externalCards(db, row.profile_id, row.date, addDays(row.date, 1)).find((c) => c.id === negativeId)!;
+}
+
+/** Icoon voor alle afspraken met deze titel op dit bord. */
+export function setExternalIcon(db: Db, user: Profile, negativeId: number, icon: string): Card {
+  const row = getExternal(db, negativeId);
+  if (!isParent(user) && row.profile_id !== user.id) throw new PlannerError(403, 'Dat is niet jouw bord');
+  db.prepare('insert or replace into external_icons(profile_id, title, icon) values (?,?,?)').run(row.profile_id, row.title, icon);
+  return externalCards(db, row.profile_id, row.date, addDays(row.date, 1)).find((c) => c.id === negativeId)!;
 }
 
 export interface SyncStatus { configured: boolean; calendars: string[]; lastSync: string | null; lastError: string | null; count: number; running: boolean }

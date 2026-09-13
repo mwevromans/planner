@@ -66,7 +66,10 @@ geen tag zijn, zoals `(KSV)`, blijven gewoon in de titel staan.
 
 Tijd bepaalt het dagdeel: vóór 12 uur ochtend, tot 15 uur middag, tot 18 uur na
 school, daarna avond. Hele-dag- en meerdaagse afspraken staan bovenaan elke dag.
-Afspraken tellen niet mee voor streak of goedkeuring; het zijn geen taken.
+Geïmporteerde afspraken krijgen de kleur van het bord waarop ze staan en een icoon
+op basis van trefwoorden (voetbal ⚽, tandarts 🦷, verjaardag 🎂). Via het kaartpaneel
+kies je een ander icoon; dat geldt dan voor alle afspraken met dezelfde titel op dat
+bord. Afvinken kan, maar telt niet mee voor streak of punten; het zijn geen taken.
 
 ## Home Assistant
 

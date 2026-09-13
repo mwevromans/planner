@@ -71,6 +71,19 @@ create table if not exists external_events(
   synced_at text not null
 );
 create index if not exists external_events_date on external_events(profile_id, date);
+create table if not exists external_icons(
+  profile_id integer not null,
+  title text not null,
+  icon text not null,
+  primary key(profile_id, title)
+);
+create table if not exists external_done(
+  profile_id integer not null,
+  uid text not null,
+  date text not null,
+  done_at text not null,
+  primary key(profile_id, uid, date)
+);
 create table if not exists redemptions(
   id integer primary key,
   profile_id integer not null references profiles(id) on delete cascade,
