@@ -84,6 +84,11 @@ create table if not exists external_done(
   done_at text not null,
   primary key(profile_id, uid, date)
 );
+create table if not exists sessions(
+  token text primary key,
+  profile_id integer not null references profiles(id) on delete cascade,
+  created_at text not null default (datetime('now'))
+);
 create table if not exists redemptions(
   id integer primary key,
   profile_id integer not null references profiles(id) on delete cascade,

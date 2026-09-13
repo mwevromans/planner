@@ -33,6 +33,26 @@ describe('login', () => {
   });
 });
 
+describe('sessies', () => {
+  it('token blijft geldig na een herstart van de server (nieuwe app, zelfde database)', async () => {
+    const db = testDb();
+    const app1 = appWith(db);
+    const token = await loginAs(app1, 'Papa');
+    const app2 = appWith(db);
+    const r = await as(app2, token).get('/api/approvals');
+    expect(r.status).toBe(200);
+  });
+  it('onbekend token is 401; token verdwijnt met het profiel', async () => {
+    const db = testDb();
+    const a = appWith(db);
+    expect((await as(a, 'geen-token').get('/api/approvals')).status).toBe(401);
+    const papa = as(a, await loginAs(a, 'Papa'));
+    const mama = await loginAs(a, 'Mama');
+    await papa.del('/api/profiles/4');
+    expect((await as(a, mama).get('/api/approvals')).status).toBe(401);
+  });
+});
+
 describe('profielen', () => {
   it('GET /api/profiles is publiek, verbergt pin en toont hasPin', async () => {
     const r = await request(app).get('/api/profiles');

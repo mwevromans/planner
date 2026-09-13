@@ -3,8 +3,6 @@ import type { NextFunction, Request, Response } from 'express';
 import type { Db } from './db.js';
 import { PlannerError, type Profile } from './types.js';
 
-const tokens = new Map<string, number>();
-
 export type PublicProfile = Omit<Profile, 'pin'> & { hasPin: boolean };
 
 export function login(db: Db, profileId: number, pin?: string): { token: string; profile: PublicProfile } | null {
@@ -12,7 +10,7 @@ export function login(db: Db, profileId: number, pin?: string): { token: string;
   if (!profile || profile.role === 'family') return null;
   if (profile.pin && profile.pin !== pin) return null;
   const token = randomUUID();
-  tokens.set(token, profile.id);
+  db.prepare('insert into sessions(token, profile_id) values (?, ?)').run(token, profile.id);
   return { token, profile: publicProfile(profile) };
 }
 
@@ -27,8 +25,9 @@ export function requireAuth(db: Db) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const header = req.header('authorization') ?? '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const id = tokens.get(token);
-    const profile = id ? (db.prepare('select * from profiles where id = ?').get(id) as Profile | undefined) : undefined;
+    const profile = token
+      ? (db.prepare('select p.* from sessions s join profiles p on p.id = s.profile_id where s.token = ?').get(token) as Profile | undefined)
+      : undefined;
     if (!profile) return next(new PlannerError(401, 'Niet ingelogd'));
     (req as AuthedRequest).user = profile;
     next();
