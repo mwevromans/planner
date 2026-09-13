@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { Db } from '../db.js';
-import { login, publicProfile, requireAuth, requireParent } from '../auth.js';
+import { login, publicProfile, requireAuth, requireParent, type AuthedRequest } from '../auth.js';
+import { PlannerError } from '../types.js';
 import { createProfile, deleteProfile, listProfiles, profileInput, profilePatch, updateProfile } from '../services/profiles.js';
 import { idParam } from './util.js';
 
@@ -23,8 +24,16 @@ export function profileRoutes(db: Db) {
     res.status(201).json(publicProfile(createProfile(db, profileInput.parse(req.body))));
   });
 
-  r.patch('/profiles/:id', requireAuth(db), requireParent, (req, res) => {
-    res.json(publicProfile(updateProfile(db, idParam(req), profilePatch.parse(req.body))));
+  /** Ouders wijzigen alles; een kind alleen de eigen avatar en kleur. */
+  const selfPatch = profilePatch.pick({ avatar: true, color: true }).strict();
+  r.patch('/profiles/:id', requireAuth(db), (req, res) => {
+    const user = (req as AuthedRequest).user;
+    const id = idParam(req);
+    if (user.role === 'parent') return res.json(publicProfile(updateProfile(db, id, profilePatch.parse(req.body))));
+    if (user.id !== id) throw new PlannerError(403, 'Dat is niet jouw profiel');
+    const body = selfPatch.safeParse(req.body);
+    if (!body.success) throw new PlannerError(403, 'Je mag alleen je avatar en kleur kiezen');
+    res.json(publicProfile(updateProfile(db, id, body.data)));
   });
 
   r.delete('/profiles/:id', requireAuth(db), requireParent, (req, res) => {

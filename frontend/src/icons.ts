@@ -8,4 +8,11 @@ export const ICON_GROUPS: { name: string; icons: string[] }[] = [
 
 export const COLORS = ['#fde68a', '#a7f3d0', '#bae6fd', '#fbcfe8', '#ddd6fe', '#fed7aa'];
 
-export const AVATARS = ['🦖', '🦄', '🐸', '🦊', '🐼', '🐯', '🦁', '🐨', '🐵', '🦋', '🐙', '🦕', '👨', '👩', '🧔', '👱‍♀️', '👵', '👴'];
+export const AVATARS = [
+  '🦖', '🦄', '🐸', '🦊', '🐼', '🐯', '🦁', '🐨', '🐵', '🦋', '🐙', '🦕',
+  '🐶', '🐱', '🐰', '🐻', '🐧', '🦉', '🐬', '🦈', '🐢', '🐝', '🐲', '🦩',
+  '🚀', '⚽', '🌈', '⭐', '🎸', '🦸', '🧜‍♀️', '🧙', '🤖', '👻', '🍩', '🌸',
+  '👨', '👩', '🧔', '👱‍♀️', '👵', '👴',
+];
+
+export const AVATAR_COLORS = ['#7dd3fc', '#f9a8d4', '#a7f3d0', '#fde68a', '#c4b5fd', '#fdba74', '#fca5a5', '#86efac', '#bae6fd', '#e9d5ff'];

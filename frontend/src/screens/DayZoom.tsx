@@ -28,7 +28,7 @@ export function DayZoom({ kidId, date }: { kidId: number; date: string }) {
 
   return (
     <div className={`screen density-${profile.density}`}>
-      <Header profile={profile} balance={week?.balance} streak={week?.streak}>
+      <Header profile={profile} balance={week?.balance} streak={week?.streak} onProfileChanged={setProfile}>
         <div className="weeknav">
           <button className="icon-btn" onClick={() => go(`/dag/${kidId}/${addDays(date, -1)}`)} aria-label="Vorige dag">‹</button>
           <span className="label" style={{ minWidth: 190 }}>{isToday ? 'Vandaag · ' : ''}{longDate(date)}</span>

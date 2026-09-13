@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { MePanel } from './MePanel';
 import { go } from '../App';
 import { setSession, useSession } from '../session';
 import type { Profile } from '../types';
@@ -9,17 +10,21 @@ interface Props {
   balance?: number;
   streak?: number;
   children?: ReactNode;
+  /** Wordt aangeroepen nadat de gebruiker het eigen profiel heeft aangepast. */
+  onProfileChanged?: (p: Profile) => void;
 }
 
-export function Header({ profile, balance, streak, children }: Props) {
+export function Header({ profile, balance, streak, children, onProfileChanged }: Props) {
   const me = useSession()!.profile;
   const viewingOther = me.id !== profile.id;
+  const [editing, setEditing] = useState(false);
   return (
     <div className="header">
-      <div className="who">
+      <button className="who" onClick={() => !viewingOther && setEditing(true)} title={viewingOther ? undefined : 'Kies je plaatje en kleur'} style={{ cursor: viewingOther ? 'default' : 'pointer' }}>
         <Avatar profile={profile} />
         <span>{profile.name}</span>
-      </div>
+      </button>
+      {editing && <MePanel profile={profile} onClose={() => setEditing(false)} onSaved={(p) => { setEditing(false); onProfileChanged?.(p); }} />}
       {balance !== undefined && profile.role === 'kid' && (
         <button className="chip" onClick={() => go(`/winkel/${profile.id}`)} title="Winkeltje">⭐ {balance}</button>
       )}

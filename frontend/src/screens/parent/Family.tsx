@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, type SyncStatus } from '../../api';
 import { Avatar } from '../../components/Avatar';
-import { ColorPicker } from '../../components/CardForm';
-import { AVATARS } from '../../icons';
+
+import { AVATARS, AVATAR_COLORS } from '../../icons';
 import type { Profile } from '../../types';
 
 export function Family({ profiles, onChanged }: { profiles: Profile[]; onChanged: () => void }) {
@@ -65,7 +65,9 @@ function ProfileForm({ initial, onDone }: { initial?: Profile; onDone: () => voi
       <label>Avatar</label>
       <div className="icon-picker"><div className="grid">{AVATARS.map((a) => <button type="button" key={a} className={a === avatar ? 'on' : ''} onClick={() => setAvatar(a)}>{a}</button>)}</div></div>
       <label>Kleur</label>
-      <ColorPicker value={color} onChange={setColor} />
+      <div className="color-picker" style={{ flexWrap: 'wrap' }}>
+        {AVATAR_COLORS.map((c) => <button type="button" key={c} className={c === color ? 'on' : ''} style={{ background: c }} onClick={() => setColor(c)} aria-label={c} />)}
+      </div>
       {initial?.role !== 'family' && <><label>Rol</label>
       <div className="segmented">
         <button type="button" className={role === 'kid' ? 'on' : ''} onClick={() => setRole('kid')}>Kind</button>

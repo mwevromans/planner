@@ -31,7 +31,7 @@ export function Shop({ kidId }: { kidId: number }) {
 
   return (
     <div className="screen">
-      <Header profile={profile} balance={wallet.balance}>
+      <Header profile={profile} balance={wallet.balance} onProfileChanged={setProfile}>
         <button className="btn btn-small" onClick={() => go(`/week/${kidId}`)}>📅 Week</button>
       </Header>
       <div className="section">

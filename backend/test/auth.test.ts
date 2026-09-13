@@ -82,6 +82,16 @@ describe('profielen', () => {
     expect(u.body.tag).toBe('n');
     expect((await p.patch(`/api/profiles/${c.body.id}`, { tag: '' })).body.tag).toBeNull();
   });
+  it('kind kiest eigen avatar en kleur, maar niets anders en niet bij een ander', async () => {
+    const sepp = as(app, await loginAs(app, 'Sepp'));
+    const ok = await sepp.patch('/api/profiles/1', { avatar: '🐸', color: '#a7f3d0' });
+    expect(ok.status).toBe(200);
+    expect(ok.body).toMatchObject({ avatar: '🐸', color: '#a7f3d0' });
+    expect((await sepp.patch('/api/profiles/1', { name: 'Koning Sepp' })).status).toBe(403);
+    expect((await sepp.patch('/api/profiles/1', { pin: '0000' })).status).toBe(403);
+    expect((await sepp.patch('/api/profiles/1', { avatar: '🐸', density: 'simple' })).status).toBe(403);
+    expect((await sepp.patch('/api/profiles/2', { avatar: '🐸' })).status).toBe(403);
+  });
   it('ouder zonder pin is niet toegestaan', async () => {
     const p = as(app, await loginAs(app, 'Papa'));
     const c = await p.post('/api/profiles', { name: 'Oma', avatar: '👵', color: '#a1b2c3', role: 'parent' });

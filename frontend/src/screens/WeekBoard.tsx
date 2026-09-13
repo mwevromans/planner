@@ -97,7 +97,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
 
   return (
     <div className={`screen density-${profile.density}`}>
-      <Header profile={profile} balance={week?.balance} streak={week?.streak}>
+      <Header profile={profile} balance={week?.balance} streak={week?.streak} onProfileChanged={setProfile}>
         <div className="weeknav">
           <button className="icon-btn" onClick={() => setStart(addDays(start, -7))} aria-label="Vorige week">‹</button>
           <span className="label">{weekLabel(start)}</span>
