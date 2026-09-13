@@ -237,4 +237,4 @@ h1, h2, h3 { margin: 0; }
 
 /* Afspraken uit de gekoppelde agenda */
 .card.external { border: 2px solid rgba(0,0,0,.12); box-shadow: none; }
-.card .badge.external { background: #1f2937; color: #fff; font-size: 12px; }
+.card .badge.external { background: #fff; font-size: 13px; }
