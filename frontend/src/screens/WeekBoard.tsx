@@ -2,6 +2,7 @@ import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSession } from '../session';
 import { api } from '../api';
 import { go } from '../App';
 import { CardGhost, CardView } from '../components/Card';
@@ -13,10 +14,11 @@ import { useToast } from '../components/Toast';
 import { addDays, DOW, dom, today, weekLabel, weekStart } from '../dates';
 import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart, type Profile, type WeekView } from '../types';
 
-function Cell({ date, part, cards, onTap, isToday, isPast }: { date: string; part: DayPart; cards: Card[]; onTap: (c: Card) => void; isToday: boolean; isPast: boolean }) {
+function Cell({ date, part, cards, family, onTap, isToday, isPast }: { date: string; part: DayPart; cards: Card[]; family: Card[]; onTap: (c: Card) => void; isToday: boolean; isPast: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: `cell:${date}|${part}` });
   return (
     <div ref={setNodeRef} className={`cell ${isToday ? 'today' : ''} ${isPast ? 'past' : ''} ${isOver ? 'over' : ''}`}>
+      {family.map((c) => <CardView key={`f${c.id}`} card={c} onTap={onTap} draggable={false} family />)}
       {cards.map((c) => <CardView key={c.id} card={c} onTap={onTap} />)}
     </div>
   );
@@ -41,7 +43,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
   useEffect(() => {
     // Als het paneel open staat, hou de kaart vers na herladen.
     if (open && week) {
-      const fresh = [...week.cards, ...week.stack].find((c) => c.id === open.id);
+      const fresh = [...week.cards, ...week.stack, ...week.family].find((c) => c.id === open.id);
       if (fresh && fresh !== open) setOpen(fresh);
     }
   }, [week, open]);
@@ -51,14 +53,18 @@ export function WeekBoard({ kidId }: { kidId: number }) {
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
   );
 
-  const byCell = useMemo(() => {
+  const group = (cards: Card[] | undefined) => {
     const m = new Map<string, Card[]>();
-    week?.cards.forEach((c) => {
+    cards?.forEach((c) => {
       const k = `${c.planned_date}|${c.day_part}`;
       m.set(k, [...(m.get(k) ?? []), c]);
     });
     return m;
-  }, [week]);
+  };
+  const byCell = useMemo(() => group(week?.cards), [week]);
+  const familyByCell = useMemo(() => group(week?.family), [week]);
+  const me = useSession()!.profile;
+  const isFamilyCard = (c: Card) => !!week?.family.some((f) => f.id === c.id);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
@@ -114,7 +120,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
                 </div>
               ))}
               {DAY_PARTS.map((part) => (
-                <DayPartRow key={part} part={part} days={days} byCell={byCell} today={t} onTap={setOpen} />
+                <DayPartRow key={part} part={part} days={days} byCell={byCell} familyByCell={familyByCell} today={t} onTap={setOpen} />
               ))}
             </div>
           </div>
@@ -123,7 +129,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
         <DragOverlay dropAnimation={null}>{dragging ? <CardGhost card={dragging} /> : null}</DragOverlay>
       </DndContext>
 
-      {open && <CardPanel card={open} onClose={() => setOpen(null)} onChanged={load} />}
+      {open && <CardPanel card={open} onClose={() => setOpen(null)} onChanged={load} readOnly={isFamilyCard(open) && me.role !== 'parent'} />}
       {adding && (
         <div className="overlay" onClick={() => setAdding(false)}>
           <div className="panel" onClick={(e) => e.stopPropagation()}>
@@ -136,7 +142,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
   );
 }
 
-function DayPartRow({ part, days, byCell, today, onTap }: { part: DayPart; days: string[]; byCell: Map<string, Card[]>; today: string; onTap: (c: Card) => void }) {
+function DayPartRow({ part, days, byCell, familyByCell, today, onTap }: { part: DayPart; days: string[]; byCell: Map<string, Card[]>; familyByCell: Map<string, Card[]>; today: string; onTap: (c: Card) => void }) {
   return (
     <>
       <div className="part-head">
@@ -144,7 +150,7 @@ function DayPartRow({ part, days, byCell, today, onTap }: { part: DayPart; days:
         <span>{DAY_PART_LABEL[part].label}</span>
       </div>
       {days.map((d) => (
-        <Cell key={d} date={d} part={part} cards={byCell.get(`${d}|${part}`) ?? []} onTap={onTap} isToday={d === today} isPast={d < today} />
+        <Cell key={d} date={d} part={part} cards={byCell.get(`${d}|${part}`) ?? []} family={familyByCell.get(`${d}|${part}`) ?? []} onTap={onTap} isToday={d === today} isPast={d < today} />
       ))}
     </>
   );

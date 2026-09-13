@@ -9,7 +9,7 @@ import { DOW } from '../../dates';
 import { DAY_PARTS, DAY_PART_LABEL, type DayPart, type Profile, type Recurrence } from '../../types';
 
 export function Cards({ kids }: { kids: Profile[] }) {
-  const [kidId, setKidId] = useState(kids[0]?.id);
+  const [kidId, setKidId] = useState(kids.find((k) => k.role === 'kid')?.id ?? kids[0]?.id);
   const [adding, setAdding] = useState(false);
   const [recs, setRecs] = useState<Recurrence[]>([]);
   const [editRec, setEditRec] = useState<Recurrence | 'new' | null>(null);
@@ -18,8 +18,8 @@ export function Cards({ kids }: { kids: Profile[] }) {
   const load = useCallback(() => { if (kidId) api.recurrences(kidId).then(setRecs); }, [kidId]);
   useEffect(() => { load(); }, [load]);
 
-  if (!kidId) return <div className="section muted">Nog geen kinderen. Voeg ze toe bij Gezin.</div>;
-  const kid = kids.find((k) => k.id === kidId)!;
+  if (!kidId) return <div className="section muted">Nog geen gezinsleden. Voeg ze toe bij Gezin.</div>;
+  const kid = kids.find((k) => k.id === kidId) ?? kids[0];
 
   return (
     <div className="section">
@@ -29,9 +29,14 @@ export function Cards({ kids }: { kids: Profile[] }) {
       <div className="two-col">
         <div className="box" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <h2>Kaarten voor {kid.name}</h2>
-          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>Nieuwe kaarten komen op de stapel; {kid.name} sleept ze zelf naar een dag. Je kunt ook meteen een dag kiezen.</p>
+          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
+            {kid.role === 'kid' && <>Nieuwe kaarten komen op de stapel; {kid.name} sleept ze zelf naar een dag. Je kunt ook meteen een dag kiezen.</>}
+            {kid.role === 'family' && <>Familie-evenementen: verjaardagen, vakantie, uitjes. Ze staan op ieders bord, alleen te bekijken.</>}
+            {kid.role === 'parent' && <>Eigen agenda van {kid.name}, zichtbaar op het gezinsbord.</>}
+          </p>
           <button className="btn btn-primary" onClick={() => setAdding(true)}>＋ Nieuwe kaart</button>
           <button className="btn" onClick={() => go(`/week/${kid.id}`)}>📅 Open weekbord van {kid.name}</button>
+          <button className="btn" onClick={() => go('/gezin')}>🏠 Gezinsweek (iedereen)</button>
           {msg && <div className="status good">{msg}</div>}
         </div>
         <div className="box" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

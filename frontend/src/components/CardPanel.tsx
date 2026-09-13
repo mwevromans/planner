@@ -11,13 +11,15 @@ interface Props {
   card: Card;
   onClose: () => void;
   onChanged: () => void;
+  /** Alleen kijken (bijv. familie-evenement op het bord van een kind). */
+  readOnly?: boolean;
 }
 
 export function celebrate() {
   confetti({ particleCount: 140, spread: 80, origin: { y: 0.7 }, scalar: 1.1 });
 }
 
-export function CardPanel({ card, onClose, onChanged }: Props) {
+export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props) {
   const me = useSession()!.profile;
   const isParent = me.role === 'parent';
   const canEdit = isParent || card.created_by === me.id;
@@ -57,15 +59,16 @@ export function CardPanel({ card, onClose, onChanged }: Props) {
             {card.notes && <p style={{ whiteSpace: 'pre-wrap', fontWeight: 600 }}>{card.notes}</p>}
             {error && <div className="error" style={{ marginBottom: 10 }}>{error}</div>}
             <div className="actions">
-              {status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
-              {status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
-              {status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}
-              {status === 'done' && !isParent && card.points === 0 && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
-              {status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
-              {card.planned_date && <button className="btn" onClick={() => run(() => api.moveCard(card.id, null, null))}>🧲 Terug op de stapel</button>}
-              {canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
-              <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>
-              {canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
+              {readOnly && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
+              {!readOnly && status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
+              {!readOnly && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}
+              {!readOnly && status === 'done' && !isParent && card.points === 0 && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
+              {!readOnly && card.planned_date && <button className="btn" onClick={() => run(() => api.moveCard(card.id, null, null))}>🧲 Terug op de stapel</button>}
+              {!readOnly && canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
+              {!readOnly && <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>}
+              {!readOnly && canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: '1 1 100%' }}>Sluiten</button>
             </div>
           </>

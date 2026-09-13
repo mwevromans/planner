@@ -41,14 +41,17 @@ export function ProfilePicker() {
       {error && <div className="error">{error}</div>}
       {!profiles && !error && <div className="muted">Laden…</div>}
       <div className="profiles">
-        {profiles?.map((p) => (
+        {profiles?.filter((p) => p.role !== 'family').map((p) => (
           <button key={p.id} className="profile-tile" onClick={() => (p.hasPin ? setPicked(p) : login(p))}>
             <Avatar profile={p} size={84} />
             <span>{p.name}</span>
           </button>
         ))}
       </div>
-      <a className="btn btn-ghost muted" href="#/overzicht">📺 Gezinsoverzicht</a>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <a className="btn btn-ghost muted" href="#/gezin">📺 Gezinsweek</a>
+        <a className="btn btn-ghost muted" href="#/overzicht">📅 Vandaag</a>
+      </div>
     </div>
   );
 }

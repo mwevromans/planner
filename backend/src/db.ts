@@ -73,8 +73,34 @@ export function openDb(path: string): Db {
   const db = new DatabaseSync(path);
   db.exec('pragma journal_mode = wal; pragma foreign_keys = on;');
   db.exec(SCHEMA);
+  migrate(db);
   seed(db);
   return db;
+}
+
+/** Databases van vóór het gezinsprofiel kennen de rol 'family' nog niet in de check-constraint. */
+function migrate(db: Db) {
+  const sql = (db.prepare("select sql from sqlite_master where type='table' and name='profiles'").get() as { sql: string }).sql;
+  if (sql.includes("'family'")) return;
+  db.exec(`
+    pragma foreign_keys = off;
+    begin;
+    create table profiles_new(
+      id integer primary key,
+      name text not null,
+      avatar text not null,
+      color text not null,
+      role text not null check(role in ('kid','parent','family')),
+      pin text,
+      density text not null default 'normal',
+      sort integer not null default 0
+    );
+    insert into profiles_new select id, name, avatar, color, role, pin, density, sort from profiles;
+    drop table profiles;
+    alter table profiles_new rename to profiles;
+    commit;
+    pragma foreign_keys = on;
+  `);
 }
 
 function seed(db: Db) {

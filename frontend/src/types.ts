@@ -12,7 +12,7 @@ export interface Profile {
   name: string;
   avatar: string;
   color: string;
-  role: 'kid' | 'parent';
+  role: 'kid' | 'parent' | 'family';
   density: 'simple' | 'normal';
   sort: number;
   hasPin: boolean;
@@ -57,12 +57,18 @@ export interface Redemption {
   title: string; icon: string; status: 'wacht' | 'gekregen' | 'nee';
 }
 
-export interface WeekView { weekStart: string; cards: Card[]; stack: Card[]; balance: number; streak: number }
+export interface WeekView { weekStart: string; cards: Card[]; stack: Card[]; family: Card[]; balance: number; streak: number }
 
 export interface Approvals {
   cards: (Card & { profile: { name: string; avatar: string } })[];
   redemptions: (Redemption & { profile: { name: string; avatar: string } })[];
 }
 
-export interface OverviewKid { profile: Profile; cards: Card[]; balance: number; streak: number }
-export interface Overview { date: string; kids: OverviewKid[] }
+export interface OverviewMember { profile: Profile; cards: Card[]; balance: number | null; streak: number | null }
+export interface Overview { date: string; members: OverviewMember[] }
+export interface FamilyWeek { weekStart: string; members: { profile: Profile; cards: Card[] }[] }
+
+export const ROLE_ORDER: Record<Profile['role'], number> = { family: 0, kid: 1, parent: 2 };
+export function sortMembers(ps: Profile[]): Profile[] {
+  return [...ps].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.sort - b.sort || a.id - b.id);
+}

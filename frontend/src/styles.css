@@ -219,3 +219,18 @@ h1, h2, h3 { margin: 0; }
 .card .meta .clock { display: inline-flex; align-items: center; gap: 4px; }
 .card .meta .clock svg { width: 16px; height: 16px; }
 .density-simple .card .meta .clock svg, .card.big .meta .clock svg { width: 22px; height: 22px; }
+
+/* Familie-evenementen op een persoonlijk bord */
+.card.family { border: 2px dashed rgba(0,0,0,.35); box-shadow: none; touch-action: auto; }
+.card .badge.family { background: #fecaca; }
+.overview .kid.family-col { background: #fff1f2; }
+
+/* Gezinsweek */
+.family-board { display: grid; grid-template-columns: 120px repeat(7, minmax(120px, 1fr)); gap: 6px; min-width: 980px; }
+.member-head { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-weight: 800; font-size: 14px; text-align: center; }
+.cell.family-row { background: #fff1f2; }
+.card.compact { min-height: 40px; padding: 6px 8px; }
+.card.compact .icon { font-size: 20px; }
+.card.compact .title { font-size: 13px; }
+.overview .kid-head .chips .chip { font-size: 14px; padding: 6px 10px; white-space: nowrap; }
+.overview .kid-head { flex-wrap: wrap; row-gap: 6px; }

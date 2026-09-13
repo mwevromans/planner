@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
 import { Header } from '../components/Header';
 import { useSession } from '../session';
-import type { Approvals as ApprovalsData, Profile } from '../types';
+import { sortMembers, type Approvals as ApprovalsData, type Profile } from '../types';
 import { Approvals } from './parent/Approvals';
 import { Cards } from './parent/Cards';
 import { Family } from './parent/Family';
@@ -23,7 +23,7 @@ export function ParentPanel() {
   useEffect(() => { load(); }, [load]);
 
   const pending = approvals.cards.length + approvals.redemptions.length;
-  const kids = profiles.filter((p) => p.role === 'kid');
+  const kids = sortMembers(profiles);
 
   return (
     <div className="screen">
@@ -37,7 +37,7 @@ export function ParentPanel() {
       {tab === 'keuren' && <Approvals data={approvals} onChanged={load} />}
       {tab === 'kaarten' && <Cards kids={kids} />}
       {tab === 'beloningen' && <Rewards />}
-      {tab === 'gezin' && <Family profiles={profiles} onChanged={load} />}
+      {tab === 'gezin' && <Family profiles={sortMembers(profiles)} onChanged={load} />}
     </div>
   );
 }

@@ -23,6 +23,7 @@ export function DayZoom({ kidId, date }: { kidId: number; date: string }) {
 
   if (!profile) return <div className="center muted">Laden…</div>;
   const cards = week?.cards.filter((c) => c.planned_date === date) ?? [];
+  const fam = week?.family.filter((c) => c.planned_date === date) ?? [];
   const isToday = date === today();
 
   return (
@@ -39,10 +40,12 @@ export function DayZoom({ kidId, date }: { kidId: number; date: string }) {
         <div className="day-parts">
           {DAY_PARTS.map((part) => {
             const items = cards.filter((c) => c.day_part === part);
+            const famItems = fam.filter((c) => c.day_part === part);
             return (
               <section key={part} className="day-part">
                 <h3><span>{DAY_PART_LABEL[part].icon}</span>{DAY_PART_LABEL[part].label}</h3>
-                {items.length === 0 && <div className="empty">Niets gepland</div>}
+                {items.length === 0 && famItems.length === 0 && <div className="empty">Niets gepland</div>}
+                {famItems.map((c) => <CardView key={`f${c.id}`} card={c} draggable={false} big family />)}
                 {items.map((c) => <CardView key={c.id} card={c} onTap={setOpen} draggable={false} big />)}
               </section>
             );

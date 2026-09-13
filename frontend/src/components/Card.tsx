@@ -15,18 +15,21 @@ interface Props {
   draggable?: boolean;
   big?: boolean;
   showDeadline?: boolean;
+  /** Familie-evenement op een persoonlijk bord: alleen kijken. */
+  family?: boolean;
 }
 
-export function CardView({ card, onTap, draggable = true, big = false, showDeadline = true }: Props) {
+export function CardView({ card, onTap, draggable = true, big = false, showDeadline = true, family = false }: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `card:${card.id}`, data: { card }, disabled: !draggable });
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} role="button" tabIndex={0}
-      className={`card ${cardStatus(card) !== 'open' ? 'done' : ''} ${isDragging ? 'dragging' : ''} ${big ? 'big' : ''}`}
+    <div ref={setNodeRef} {...(draggable ? { ...listeners, ...attributes } : {})} role="button" tabIndex={0}
+      className={`card ${cardStatus(card) !== 'open' ? 'done' : ''} ${isDragging ? 'dragging' : ''} ${big ? 'big' : ''} ${family ? 'family' : ''}`}
       style={{ background: card.color }}
       onClick={() => onTap?.(card)}
       onKeyDown={(e) => { if (e.key === 'Enter') onTap?.(card); }}
     >
       <CardInner card={card} showDeadline={showDeadline} />
+      {family && <span className="badge family">🏠</span>}
     </div>
   );
 }

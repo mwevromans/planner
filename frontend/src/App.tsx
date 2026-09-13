@@ -6,6 +6,7 @@ import { DayZoom } from './screens/DayZoom';
 import { Shop } from './screens/Shop';
 import { ParentPanel } from './screens/ParentPanel';
 import { Overview } from './screens/Overview';
+import { FamilyWeek } from './screens/FamilyWeek';
 
 function useHash(): string {
   const [hash, setHash] = useState(location.hash);
@@ -26,6 +27,7 @@ export function App() {
   const [route, a, b] = parts;
 
   if (route === 'overzicht') return <Overview />;
+  if (route === 'gezin') return <FamilyWeek />;
   if (!session) return <ProfilePicker />;
 
   const me = session.profile;

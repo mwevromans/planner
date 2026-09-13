@@ -19,17 +19,18 @@ export function Overview() {
       <div className="header">
         <h1 style={{ fontSize: 28 }}>📅 {longDate(data.date)}</h1>
         <span className="spacer" />
+        <a className="btn btn-small" href="#/gezin">📺 Hele week</a>
         <a className="btn btn-ghost muted" href="#/">Inloggen</a>
       </div>
       <div className="overview">
-        {data.kids.map((k) => (
-          <div key={k.profile.id} className="kid">
+        {data.members.map((k) => (
+          <div key={k.profile.id} className={`kid ${k.profile.role === 'family' ? 'family-col' : ''}`}>
             <div className="kid-head">
               <Avatar profile={k.profile} size={56} />
               <span>{k.profile.name}</span>
               <span className="chips">
-                <span className="chip">⭐ {k.balance}</span>
-                {k.streak > 0 && <span className="chip">🔥 {k.streak}</span>}
+                {k.balance !== null && <span className="chip">⭐ {k.balance}</span>}
+                {k.streak !== null && k.streak > 0 && <span className="chip">🔥 {k.streak}</span>}
               </span>
             </div>
             {k.cards.length === 0 && <div className="muted" style={{ fontWeight: 700 }}>Niets gepland vandaag 🎈</div>}

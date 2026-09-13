@@ -4,7 +4,7 @@ import { COLORS, ICON_GROUPS } from '../icons';
 import { today } from '../dates';
 import { TimePicker } from './TimePicker';
 import { useSession } from '../session';
-import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart, type Profile } from '../types';
+import { DAY_PARTS, DAY_PART_LABEL, sortMembers, type Card, type DayPart, type Profile } from '../types';
 
 interface Props {
   profileId: number;
@@ -44,7 +44,7 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
   const isParent = me.role === 'parent';
   const base = initial ?? template;
   const [forId, setForId] = useState(profileId);
-  const [kids, setKids] = useState<Profile[]>([]);
+  const [members, setMembers] = useState<Profile[]>([]);
   const [title, setTitle] = useState(base?.title ?? '');
   const [icon, setIcon] = useState(base?.icon ?? '📚');
   const [color, setColor] = useState(base?.color ?? COLORS[0]);
@@ -55,8 +55,10 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
   const [onBoard, setOnBoard] = useState(!!base?.planned_date);
   const [plannedDate, setPlannedDate] = useState(base?.planned_date ?? '');
   const [dayPart, setDayPart] = useState<DayPart>(base?.day_part ?? 'namiddag');
+  const targetRole = members.find((m) => m.id === (initial?.profile_id ?? forId))?.role;
+  const targetIsKid = targetRole === undefined ? true : targetRole === 'kid';
   useEffect(() => {
-    if (isParent && !initial) api.profiles().then((ps) => setKids(ps.filter((k) => k.role === 'kid'))).catch(() => undefined);
+    if (isParent) api.profiles().then((ps) => setMembers(sortMembers(ps))).catch(() => undefined);
   }, [isParent, initial]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -69,7 +71,7 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
     const body: Partial<CardInput> = {
       title: title.trim(), icon, color, deadline: deadline || null, time: time || null, notes,
       plannedDate: onBoard ? plannedDate : null, dayPart: onBoard ? dayPart : null,
-      ...(isParent ? { points } : {}),
+      ...(isParent ? { points: targetIsKid ? points : 0 } : {}),
     };
     try {
       const saved = initial
@@ -87,11 +89,11 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
         <span className="icon" style={{ background: color }}>{icon}</span>
         <h2>{initial ? 'Kaart aanpassen' : template ? 'Kopie maken' : 'Nieuwe kaart'}</h2>
       </div>
-      {isParent && !initial && kids.length > 1 && (
+      {isParent && !initial && members.length > 1 && (
         <>
           <label>Voor wie</label>
           <div className="segmented">
-            {kids.map((k) => <button type="button" key={k.id} className={k.id === forId ? 'on' : ''} onClick={() => setForId(k.id)}>{k.avatar} {k.name}</button>)}
+            {members.map((k) => <button type="button" key={k.id} className={k.id === forId ? 'on' : ''} onClick={() => setForId(k.id)}>{k.avatar} {k.name}</button>)}
           </div>
         </>
       )}
@@ -126,7 +128,7 @@ export function CardForm({ profileId, initial, template, onSaved, onCancel }: Pr
           </div>
         </>
       )}
-      {isParent && (
+      {isParent && targetIsKid && (
         <label>Punten (0 = geen)
           <input type="number" min={0} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} />
         </label>

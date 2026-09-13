@@ -20,10 +20,10 @@ export function Header({ profile, balance, streak, children }: Props) {
         <Avatar profile={profile} />
         <span>{profile.name}</span>
       </div>
-      {balance !== undefined && (
+      {balance !== undefined && profile.role === 'kid' && (
         <button className="chip" onClick={() => go(`/winkel/${profile.id}`)} title="Winkeltje">⭐ {balance}</button>
       )}
-      {streak !== undefined && streak > 0 && <span className="chip" title="Dagen op rij alles klaar">🔥 {streak}</span>}
+      {streak !== undefined && streak > 0 && profile.role === 'kid' && <span className="chip" title="Dagen op rij alles klaar">🔥 {streak}</span>}
       <span className="spacer" />
       {children}
       {viewingOther

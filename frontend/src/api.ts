@@ -1,5 +1,5 @@
 import { getSession, setSession } from './session';
-import type { Approvals, Card, DayPart, Overview, Profile, Recurrence, Redemption, Reward, WeekView } from './types';
+import type { Approvals, Card, DayPart, FamilyWeek, Overview, Profile, Recurrence, Redemption, Reward, WeekView } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -51,6 +51,7 @@ export const api = {
   approvals: () => call<Approvals>('GET', '/approvals'),
 
   overview: (date: string) => call<Overview>('GET', `/overview?date=${date}`),
+  familyWeek: (start: string) => call<FamilyWeek>('GET', `/family-week?start=${start}`),
 };
 
 export interface CardInput {

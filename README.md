@@ -20,21 +20,26 @@ docker compose up -d --build
 
 Open `http://<host>:3000`. De database staat in `./data/planner.db`.
 
-Eerste keer: profielen Sepp, Liz, Papa en Mama staan klaar. De ouder-pincode is
-`1234`; wijzig die via Ouderpaneel → Gezin → ✏️.
+Eerste keer: profielen Sepp, Liz, Papa en Mama staan klaar, plus het vaste profiel
+**Gezin** 🏠 voor familie-evenementen (verjaardagen, vakantie, uitjes). Kaarten op
+Gezin staan op ieders bord, alleen te bekijken. Ouders hebben ook een eigen bord.
+De ouder-pincode is `1234`; wijzig die via Ouderpaneel → Gezin → ✏️.
 
 ## Op de iPad als app
 
 Open de site in Safari → Delen → **Zet op beginscherm**. De planner opent dan
-zonder browserbalken. Voor het wanddashboard: open `http://<host>:3000/#/overzicht`
-(alleen-lezen, ververst zichzelf elke minuut, geen login).
+zonder browserbalken. Voor het wanddashboard, alleen-lezen en zonder login,
+ververst zichzelf elke minuut:
+
+- `http://<host>:3000/#/gezin` — hele week, een rij per gezinslid
+- `http://<host>:3000/#/overzicht` — vandaag per gezinslid
 
 ## Ontwikkelen
 
 ```bash
 cd backend && npm install && npm run dev      # API op :3000, database in backend/data/
 cd frontend && npm install && npm run dev     # UI op :5173, proxied naar :3000
-cd backend && npm test                        # 55 tests, in-memory SQLite
+cd backend && npm test                        # 60 tests, in-memory SQLite
 ```
 
 Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
@@ -44,7 +49,8 @@ Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
 Publiek leesbare endpoints, geen token nodig:
 
 - `GET /api/kids/:id/summary` → `{name, balance, streak, todayTotal, todayDone, pendingApprovals}`
-- `GET /api/overview?date=YYYY-MM-DD` → kaarten van die dag per kind
+- `GET /api/overview?date=YYYY-MM-DD` → kaarten van die dag per gezinslid
+- `GET /api/family-week?start=YYYY-MM-DD` → hele week per gezinslid
 
 Voorbeeld REST-sensor in `configuration.yaml`:
 
@@ -79,7 +85,8 @@ token voor `Authorization: Bearer`. (O) = alleen ouders.
 | `POST /redemptions {rewardId}` | kind wisselt in |
 | `POST /redemptions/:id/approve` `/deny` (O) | inwisselen afhandelen |
 | `GET /approvals` (O) | alles wat wacht op een ouder |
-| `GET /overview?date=` | dagoverzicht alle kinderen (publiek) |
+| `GET /overview?date=` | dagoverzicht hele gezin (publiek) |
+| `GET /family-week?start=maandag` | weekoverzicht hele gezin (publiek) |
 | `GET /kids/:id/summary` | cijfers voor Home Assistant (publiek) |
 
 ## Regels
