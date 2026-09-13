@@ -1,7 +1,7 @@
 export type DayPart = 'ochtend' | 'middag' | 'namiddag' | 'avond';
 export const DAY_PARTS: DayPart[] = ['ochtend', 'middag', 'namiddag', 'avond'];
 
-export type Role = 'kid' | 'parent';
+export type Role = 'kid' | 'parent' | 'family';
 export type Density = 'simple' | 'normal';
 
 export interface Profile {

@@ -1,4 +1,4 @@
-import type { Db } from '../db.js';
+import { familyProfileId, type Db } from '../db.js';
 import { addDays, today } from '../dates.js';
 import type { Card } from '../types.js';
 import { balance, streak } from './points.js';
@@ -8,6 +8,8 @@ export interface WeekView {
   weekStart: string;
   cards: Card[];
   stack: Card[];
+  /** Familie-evenementen in deze week (alleen-lezen op een persoonlijk bord). */
+  family: Card[];
   balance: number;
   streak: number;
 }
@@ -28,10 +30,13 @@ export function stackFor(db: Db, profileId: number): Card[] {
 
 export function getWeek(db: Db, profileId: number, weekStart: string): WeekView {
   materializeWeek(db, profileId, weekStart);
+  const fam = familyProfileId(db);
+  if (fam !== profileId) materializeWeek(db, fam, weekStart);
   return {
     weekStart,
     cards: cardsForRange(db, profileId, weekStart, addDays(weekStart, 7)),
     stack: stackFor(db, profileId),
+    family: fam === profileId ? [] : cardsForRange(db, fam, weekStart, addDays(weekStart, 7)),
     balance: balance(db, profileId),
     streak: streak(db, profileId, today()),
   };

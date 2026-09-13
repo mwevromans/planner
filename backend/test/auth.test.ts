@@ -22,6 +22,11 @@ describe('login', () => {
     expect(r.status).toBe(200);
     expect(r.body.profile.role).toBe('parent');
   });
+  it('gezinsprofiel kan niet inloggen', async () => {
+    const fam = (await request(app).get('/api/profiles')).body.find((p: any) => p.role === 'family');
+    const r = await request(app).post('/api/login').send({ profileId: fam.id });
+    expect(r.status).toBe(401);
+  });
   it('onbekend profiel 401', async () => {
     const r = await request(app).post('/api/login').send({ profileId: 99 });
     expect(r.status).toBe(401);
@@ -32,10 +37,13 @@ describe('profielen', () => {
   it('GET /api/profiles is publiek, verbergt pin en toont hasPin', async () => {
     const r = await request(app).get('/api/profiles');
     expect(r.status).toBe(200);
-    expect(r.body).toHaveLength(4);
-    expect(r.body[2].hasPin).toBe(true);
-    expect(r.body[0].hasPin).toBe(false);
-    expect(r.body[2].pin).toBeUndefined();
+    expect(r.body).toHaveLength(5);
+    const names = r.body.map((p: any) => p.name);
+    expect(names).toContain('Gezin');
+    const papa = r.body.find((p: any) => p.name === 'Papa');
+    expect(papa.hasPin).toBe(true);
+    expect(papa.pin).toBeUndefined();
+    expect(r.body.find((p: any) => p.name === 'Sepp').hasPin).toBe(false);
   });
   it('zonder token 401, kind 403 bij aanmaken', async () => {
     expect((await request(app).post('/api/profiles').send({})).status).toBe(401);
@@ -57,10 +65,13 @@ describe('profielen', () => {
     const c = await p.post('/api/profiles', { name: 'Oma', avatar: '👵', color: '#a1b2c3', role: 'parent' });
     expect(c.status).toBe(400);
   });
-  it('laatste ouder kan niet weg, andere wel', async () => {
+  it('laatste ouder kan niet weg, andere wel, gezin nooit', async () => {
     const p = as(app, await loginAs(app, 'Papa'));
     expect((await p.del('/api/profiles/4')).status).toBe(204);
     expect((await p.del('/api/profiles/3')).status).toBe(409);
+    const fam = (await request(app).get('/api/profiles')).body.find((x: any) => x.role === 'family');
+    expect((await p.del(`/api/profiles/${fam.id}`)).status).toBe(409);
+    expect((await p.patch(`/api/profiles/${fam.id}`, { name: 'Familie Vromans' })).body.name).toBe('Familie Vromans');
   });
   it('ongeldige invoer geeft 400', async () => {
     const p = as(app, await loginAs(app, 'Papa'));

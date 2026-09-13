@@ -7,18 +7,35 @@ import { getProfile, listProfiles } from './profiles.js';
 import { materializeWeek } from './recurrences.js';
 import { cardsForRange } from './week.js';
 
+const ROLE_ORDER = { family: 0, kid: 1, parent: 2 } as const;
+
+function members(db: Db) {
+  return listProfiles(db).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.sort - b.sort || a.id - b.id);
+}
+
+/** Vandaag voor het hele gezin: Gezin, kinderen, ouders. */
 export function overview(db: Db, date: string) {
-  const kids = listProfiles(db).filter((p) => p.role === 'kid');
   return {
     date,
-    kids: kids.map((kid) => {
-      materializeWeek(db, kid.id, weekStart(date));
+    members: members(db).map((p) => {
+      materializeWeek(db, p.id, weekStart(date));
       return {
-        profile: publicProfile(kid),
-        cards: cardsForRange(db, kid.id, date, addDays(date, 1)),
-        balance: balance(db, kid.id),
-        streak: streak(db, kid.id, date),
+        profile: publicProfile(p),
+        cards: cardsForRange(db, p.id, date, addDays(date, 1)),
+        balance: p.role === 'kid' ? balance(db, p.id) : null,
+        streak: p.role === 'kid' ? streak(db, p.id, date) : null,
       };
+    }),
+  };
+}
+
+/** Hele week voor het hele gezin, voor het wandbord. */
+export function familyWeek(db: Db, start: string) {
+  return {
+    weekStart: start,
+    members: members(db).map((p) => {
+      materializeWeek(db, p.id, start);
+      return { profile: publicProfile(p), cards: cardsForRange(db, p.id, start, addDays(start, 7)) };
     }),
   };
 }

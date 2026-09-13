@@ -10,7 +10,7 @@ create table if not exists profiles(
   name text not null,
   avatar text not null,
   color text not null,
-  role text not null check(role in ('kid','parent')),
+  role text not null check(role in ('kid','parent','family')),
   pin text,
   density text not null default 'normal',
   sort integer not null default 0
@@ -78,8 +78,8 @@ export function openDb(path: string): Db {
 }
 
 function seed(db: Db) {
-  const count = (db.prepare('select count(*) as n from profiles').get() as { n: number }).n;
-  if (count > 0) return;
+  const count = (db.prepare("select count(*) as n from profiles where role <> 'family'").get() as { n: number }).n;
+  if (count > 0) { ensureFamilyProfile(db); return; }
   const ins = db.prepare(
     'insert into profiles(name, avatar, color, role, pin, density, sort) values (?,?,?,?,?,?,?)',
   );
@@ -91,4 +91,16 @@ function seed(db: Db) {
   rew.run('Half uur extra schermtijd', '📱', 20);
   rew.run('Film kiezen', '🎬', 30);
   rew.run('Kiezen wat we eten', '🍕', 40);
+  ensureFamilyProfile(db);
+}
+
+/** Eén systeemprofiel "Gezin" voor familie-evenementen; bestaande databases krijgen het er bij. */
+function ensureFamilyProfile(db: Db) {
+  const has = (db.prepare("select count(*) as n from profiles where role='family'").get() as { n: number }).n;
+  if (has > 0) return;
+  db.prepare("insert into profiles(name, avatar, color, role, pin, density, sort) values ('Gezin','🏠','#fecaca','family',null,'normal',0)").run();
+}
+
+export function familyProfileId(db: Db): number {
+  return (db.prepare("select id from profiles where role='family' limit 1").get() as { id: number }).id;
 }

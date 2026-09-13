@@ -33,6 +33,8 @@ export function createProfile(db: Db, input: z.infer<typeof profileInput>): Prof
 
 export function updateProfile(db: Db, id: number, patch: z.infer<typeof profilePatch>): Profile {
   const current = getProfile(db, id);
+  if (current.role === 'family' && patch.role) throw new PlannerError(400, 'Het gezinsprofiel houdt zijn rol');
+  if (current.role === 'family') { const { role: _r, pin: _p, ...rest } = patch; patch = rest; }
   const next = { ...current, ...patch };
   if (next.role === 'parent' && !next.pin) throw new PlannerError(400, 'Een ouder heeft een pincode nodig');
   db.prepare('update profiles set name=?, avatar=?, color=?, role=?, pin=?, density=? where id=?')
@@ -44,6 +46,7 @@ export function deleteProfile(db: Db, id: number): void {
   getProfile(db, id);
   const parents = (db.prepare("select count(*) as n from profiles where role='parent'").get() as { n: number }).n;
   const target = getProfile(db, id);
+  if (target.role === 'family') throw new PlannerError(409, 'Het gezinsprofiel kan niet weg');
   if (target.role === 'parent' && parents <= 1) throw new PlannerError(409, 'De laatste ouder kan niet weg');
   db.prepare('delete from profiles where id = ?').run(id);
 }

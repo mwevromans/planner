@@ -9,7 +9,7 @@ export type PublicProfile = Omit<Profile, 'pin'> & { hasPin: boolean };
 
 export function login(db: Db, profileId: number, pin?: string): { token: string; profile: PublicProfile } | null {
   const profile = db.prepare('select * from profiles where id = ?').get(profileId) as Profile | undefined;
-  if (!profile) return null;
+  if (!profile || profile.role === 'family') return null;
   if (profile.pin && profile.pin !== pin) return null;
   const token = randomUUID();
   tokens.set(token, profile.id);
