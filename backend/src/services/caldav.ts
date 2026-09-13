@@ -59,21 +59,22 @@ export function dayPartFor(time: string | null): DayPart {
 }
 
 /**
- * "(s)", "(l)", "(s,l)", "(s)(l)" of "(Sepp)" achter de titel koppelt aan kinderen op de
- * eerste letter of volledige naam. Zonder tag: het gezinsprofiel.
+ * Tags tussen haakjes achter de titel wijzen gezinsleden aan: "(s)", "(l)", "(s,l)", "(l & e)",
+ * "(s)(l)" of een volledige naam "(Sepp)". Elk profiel heeft een eigen tag (ouderpaneel → Gezin).
+ * Haakjes die geen tags zijn blijven in de titel staan. Zonder tag: het gezinsprofiel.
  */
 export function routeByTag(summary: string, profiles: Profile[]): { title: string; profileIds: number[] } {
   const family = profiles.find((p) => p.role === 'family');
-  const kids = profiles.filter((p) => p.role === 'kid');
+  const people = profiles.filter((p) => p.role !== 'family');
   const ids = new Set<number>();
   let title = summary.trim();
   const tagRe = /\s*\(([^()]{1,40})\)\s*$/;
   let m: RegExpMatchArray | null;
   while ((m = title.match(tagRe))) {
-    const tokens = m[1].split(/[,+/ ]+/).map((t) => t.trim().toLowerCase()).filter(Boolean);
-    const matched = tokens.map((t) => kids.find((k) => k.name.toLowerCase() === t || k.name.toLowerCase().startsWith(t)));
-    if (tokens.length === 0 || matched.some((k) => !k)) break; // geen kind-tag, laat staan
-    matched.forEach((k) => ids.add(k!.id));
+    const tokens = m[1].split(/[,+/&]|\s+en\s+|\s+/).map((t) => t.trim().toLowerCase()).filter(Boolean);
+    const matched = tokens.map((t) => people.find((p) => (p.tag && p.tag === t) || p.name.toLowerCase() === t));
+    if (tokens.length === 0 || matched.some((p) => !p)) break;
+    matched.forEach((p) => ids.add(p!.id));
     title = title.slice(0, m.index).trim();
   }
   if (ids.size === 0 && family) ids.add(family.id);

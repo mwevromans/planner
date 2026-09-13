@@ -13,6 +13,8 @@ export interface Profile {
   pin: string | null;
   density: Density;
   sort: number;
+  /** Letter(s) tussen haakjes achter een agendatitel die deze persoon aanwijzen, bijv. 's'. */
+  tag: string | null;
 }
 
 export interface Card {

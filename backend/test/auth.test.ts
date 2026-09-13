@@ -56,9 +56,11 @@ describe('profielen', () => {
     const c = await p.post('/api/profiles', { name: 'Noor', avatar: '🐸', color: '#a1b2c3', role: 'kid' });
     expect(c.status).toBe(201);
     expect(c.body.density).toBe('normal');
-    const u = await p.patch(`/api/profiles/${c.body.id}`, { density: 'simple' });
+    const u = await p.patch(`/api/profiles/${c.body.id}`, { density: 'simple', tag: 'N' });
     expect(u.status).toBe(200);
     expect(u.body.density).toBe('simple');
+    expect(u.body.tag).toBe('n');
+    expect((await p.patch(`/api/profiles/${c.body.id}`, { tag: '' })).body.tag).toBeNull();
   });
   it('ouder zonder pin is niet toegestaan', async () => {
     const p = as(app, await loginAs(app, 'Papa'));

@@ -9,6 +9,7 @@ export const profileInput = z.object({
   role: z.enum(['kid', 'parent']),
   pin: z.string().regex(/^\d{4,6}$/).nullable().optional(),
   density: z.enum(['simple', 'normal']).default('normal'),
+  tag: z.string().trim().toLowerCase().max(10).transform((v) => v || null).nullable().optional(),
 });
 export const profilePatch = profileInput.partial();
 
@@ -26,8 +27,8 @@ export function createProfile(db: Db, input: z.infer<typeof profileInput>): Prof
   if (input.role === 'parent' && !input.pin) throw new PlannerError(400, 'Een ouder heeft een pincode nodig');
   const sort = ((db.prepare('select coalesce(max(sort),0) as m from profiles').get() as { m: number }).m) + 1;
   const r = db
-    .prepare('insert into profiles(name, avatar, color, role, pin, density, sort) values (?,?,?,?,?,?,?)')
-    .run(input.name, input.avatar, input.color, input.role, input.pin ?? null, input.density, sort);
+    .prepare('insert into profiles(name, avatar, color, role, pin, density, sort, tag) values (?,?,?,?,?,?,?,?)')
+    .run(input.name, input.avatar, input.color, input.role, input.pin ?? null, input.density, sort, input.tag ?? null);
   return getProfile(db, Number(r.lastInsertRowid));
 }
 
@@ -37,8 +38,8 @@ export function updateProfile(db: Db, id: number, patch: z.infer<typeof profileP
   if (current.role === 'family') { const { role: _r, pin: _p, ...rest } = patch; patch = rest; }
   const next = { ...current, ...patch };
   if (next.role === 'parent' && !next.pin) throw new PlannerError(400, 'Een ouder heeft een pincode nodig');
-  db.prepare('update profiles set name=?, avatar=?, color=?, role=?, pin=?, density=? where id=?')
-    .run(next.name, next.avatar, next.color, next.role, next.pin ?? null, next.density, id);
+  db.prepare('update profiles set name=?, avatar=?, color=?, role=?, pin=?, density=?, tag=? where id=?')
+    .run(next.name, next.avatar, next.color, next.role, next.pin ?? null, next.density, next.tag ?? null, id);
   return getProfile(db, id);
 }
 

@@ -47,10 +47,11 @@ Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
 ## Apple-gezinsagenda koppelen (alleen lezen)
 
 Afspraken uit een iCloud-agenda verschijnen als alleen-lezen kaarten met een
--badge. Zonder tag komen ze op Gezin en dus op ieders bord. Zet **(s)** of **(l)**
-achter de titel in Apple om de afspraak op het bord van Sepp of Liz te zetten;
-`(s,l)` of `(s)(l)` zet hem bij beiden. Het gaat op de eerste letter of de volledige
-naam van een kind, dus `(Sepp)` werkt ook.
+-badge. Zonder tag komen ze op Gezin en dus op ieders bord. Elk gezinslid heeft
+een **agenda-tag** (Ouderpaneel → Gezin → ✏️), bijvoorbeeld `s` voor Sepp. Zet die
+tussen haakjes achter de titel in Apple: `Voetbal (s)`. Meerdere tegelijk kan met
+`(s,l)`, `(l & e)` of `(s)(l)`; een volledige naam `(Sepp)` werkt ook. Haakjes die
+geen tag zijn, zoals `(KSV)`, blijven gewoon in de titel staan.
 
 1. Maak een app-specifiek wachtwoord op https://account.apple.com → *Inloggen en
    beveiliging* → *App-specifieke wachtwoorden*. Dit kun je altijd intrekken.

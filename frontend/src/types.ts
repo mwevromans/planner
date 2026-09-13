@@ -16,6 +16,7 @@ export interface Profile {
   density: 'simple' | 'normal';
   sort: number;
   hasPin: boolean;
+  tag: string | null;
 }
 
 export interface Card {

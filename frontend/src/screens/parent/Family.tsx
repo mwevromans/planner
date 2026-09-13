@@ -9,7 +9,7 @@ export function Family({ profiles, onChanged }: { profiles: Profile[]; onChanged
   const [edit, setEdit] = useState<Profile | 'new' | null>(null);
   return (
     <div className="section">
-      <SyncBox />
+      <SyncBox profiles={profiles} />
       <div className="box" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2>👨‍👩‍👧‍👦 Gezin</h2>
         {profiles.map((p) => (
@@ -17,7 +17,7 @@ export function Family({ profiles, onChanged }: { profiles: Profile[]; onChanged
             <Avatar profile={p} size={40} />
             <span className="body">
               <div className="title">{p.name}</div>
-              <div className="sub">{p.role === 'parent' ? 'Ouder' : p.role === 'family' ? 'Het hele gezin' : 'Kind'}{p.role === 'kid' ? ` · weergave ${p.density === 'simple' ? 'simpel' : 'normaal'}` : ''}{p.hasPin ? ' · 🔒 pincode' : ''}</div>
+              <div className="sub">{p.role === 'parent' ? 'Ouder' : p.role === 'family' ? 'Het hele gezin' : 'Kind'}{p.role === 'kid' ? ` · weergave ${p.density === 'simple' ? 'simpel' : 'normaal'}` : ''}{p.hasPin ? ' · 🔒 pincode' : ''}{p.role !== 'family' ? (p.tag ? ` · agenda-tag (${p.tag})` : ' · geen agenda-tag') : ''}</div>
             </span>
             <button className="btn btn-small" onClick={() => setEdit(p)}>✏️</button>
           </div>
@@ -43,13 +43,14 @@ function ProfileForm({ initial, onDone }: { initial?: Profile; onDone: () => voi
   const [density, setDensity] = useState<'simple' | 'normal'>(initial?.density ?? 'normal');
   const [pin, setPin] = useState('');
   const [clearPin, setClearPin] = useState(false);
+  const [tag, setTag] = useState(initial?.tag ?? '');
   const [error, setError] = useState('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return setError('Geef een naam');
     if (pin && !/^\d{4,6}$/.test(pin)) return setError('Pincode is 4 tot 6 cijfers');
-    const body: Partial<Profile> & { pin?: string | null } = { name: name.trim(), avatar, color, density };
+    const body: Partial<Profile> & { pin?: string | null } = { name: name.trim(), avatar, color, density, tag: tag.trim() || null };
     if (role !== 'family') { body.role = role; if (pin) body.pin = pin; else if (clearPin) body.pin = null; }
     try {
       if (initial) await api.updateProfile(initial.id, body); else await api.createProfile(body);
@@ -79,6 +80,11 @@ function ProfileForm({ initial, onDone }: { initial?: Profile; onDone: () => voi
           </div>
         </>
       )}
+      {role !== 'family' && (
+        <label>Agenda-tag: letter(s) tussen haakjes achter een Apple-afspraak, bijv. "s" voor "(s)"
+          <input type="text" value={tag} onChange={(e) => setTag(e.target.value.toLowerCase())} maxLength={10} placeholder="bijv. s" style={{ maxWidth: 140 }} />
+        </label>
+      )}
       {role !== 'family' && <label>{initial?.hasPin ? 'Nieuwe pincode (leeg = laten staan)' : 'Pincode (optioneel voor kind, verplicht voor ouder)'}
         <input type="text" inputMode="numeric" pattern="\d*" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={6} />
       </label>}
@@ -95,7 +101,8 @@ function ProfileForm({ initial, onDone }: { initial?: Profile; onDone: () => voi
   );
 }
 
-function SyncBox() {
+function SyncBox({ profiles }: { profiles: Profile[] }) {
+  const tags = profiles.filter((p) => p.tag).map((p) => ({ name: p.name, tag: p.tag! }));
   const [st, setSt] = useState<SyncStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const load = () => api.syncStatus().then(setSt).catch(() => undefined);
@@ -117,7 +124,10 @@ function SyncBox() {
             {st.running ? ' · bezig…' : ''}
           </p>
           {st.lastError && <div className="error">Laatste fout: {st.lastError}</div>}
-          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>Tip: zet (s) of (l) achter een titel in Apple om de afspraak op het bord van Sepp of Liz te zetten. Zonder tag komt hij op Gezin.</p>
+          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
+            Zet een tag tussen haakjes achter de titel in Apple om een afspraak op iemands bord te zetten, bijv. "(s)" of "(l & e)". Zonder tag komt hij op Gezin.
+            Tags: {tags.length ? tags.map((t) => `${t.name} (${t.tag})`).join(', ') : 'nog geen ingesteld'}. Aanpassen via ✏️ bij een gezinslid.
+          </p>
           <button className="btn btn-small" disabled={busy} onClick={async () => { setBusy(true); try { setSt(await api.syncNow()); } finally { setBusy(false); } }}>🔄 Nu synchroniseren</button>
         </>
       )}

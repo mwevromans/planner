@@ -45,6 +45,7 @@ test('oude database zonder rol family wordt gemigreerd en krijgt een gezinsprofi
   const db = openDb(path);
   const roles = db.prepare('select name, role from profiles order by id').all() as any[];
   expect(roles.map((r) => r.name)).toEqual(['Sepp', 'Papa', 'Gezin']);
+  expect((db.prepare('pragma table_info(profiles)').all() as any[]).some((c) => c.name === 'tag')).toBe(true);
   expect((db.prepare('select count(*) as n from cards where profile_id=1').get() as any).n).toBe(1);
   // niet opnieuw geseed: geen Liz/Mama toegevoegd
   expect(roles.find((r) => r.name === 'Liz')).toBeUndefined();

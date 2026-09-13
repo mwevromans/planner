@@ -13,7 +13,8 @@ create table if not exists profiles(
   role text not null check(role in ('kid','parent','family')),
   pin text,
   density text not null default 'normal',
-  sort integer not null default 0
+  sort integer not null default 0,
+  tag text
 );
 create table if not exists recurrences(
   id integer primary key,
@@ -93,6 +94,8 @@ export function openDb(path: string): Db {
 
 /** Databases van vóór het gezinsprofiel kennen de rol 'family' nog niet in de check-constraint. */
 function migrate(db: Db) {
+  const cols = (db.prepare('pragma table_info(profiles)').all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes('tag')) db.exec('alter table profiles add column tag text');
   const sql = (db.prepare("select sql from sqlite_master where type='table' and name='profiles'").get() as { sql: string }).sql;
   if (sql.includes("'family'")) return;
   db.exec(`
@@ -106,9 +109,10 @@ function migrate(db: Db) {
       role text not null check(role in ('kid','parent','family')),
       pin text,
       density text not null default 'normal',
-      sort integer not null default 0
+      sort integer not null default 0,
+      tag text
     );
-    insert into profiles_new select id, name, avatar, color, role, pin, density, sort from profiles;
+    insert into profiles_new select id, name, avatar, color, role, pin, density, sort, tag from profiles;
     drop table profiles;
     alter table profiles_new rename to profiles;
     commit;
@@ -120,12 +124,12 @@ function seed(db: Db) {
   const count = (db.prepare("select count(*) as n from profiles where role <> 'family'").get() as { n: number }).n;
   if (count > 0) { ensureFamilyProfile(db); return; }
   const ins = db.prepare(
-    'insert into profiles(name, avatar, color, role, pin, density, sort) values (?,?,?,?,?,?,?)',
+    'insert into profiles(name, avatar, color, role, pin, density, sort, tag) values (?,?,?,?,?,?,?,?)',
   );
-  ins.run('Sepp', '🦖', '#7dd3fc', 'kid', null, 'normal', 1);
-  ins.run('Liz', '🦄', '#f9a8d4', 'kid', null, 'simple', 2);
-  ins.run('Papa', '👨', '#a7f3d0', 'parent', '1234', 'normal', 3);
-  ins.run('Mama', '👩', '#fde68a', 'parent', '1234', 'normal', 4);
+  ins.run('Sepp', '🦖', '#7dd3fc', 'kid', null, 'normal', 1, 's');
+  ins.run('Liz', '🦄', '#f9a8d4', 'kid', null, 'simple', 2, 'l');
+  ins.run('Papa', '👨', '#a7f3d0', 'parent', '1234', 'normal', 3, null);
+  ins.run('Mama', '👩', '#fde68a', 'parent', '1234', 'normal', 4, null);
   const rew = db.prepare('insert into rewards(title, icon, cost) values (?,?,?)');
   rew.run('Half uur extra schermtijd', '📱', 20);
   rew.run('Film kiezen', '🎬', 30);

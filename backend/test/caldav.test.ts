@@ -25,6 +25,20 @@ describe('routeByTag', () => {
     expect(routeByTag('Tandarts (s+l)', ps).profileIds.sort()).toEqual([1, 2]);
     expect(routeByTag('Tandarts (s)(l)', ps).profileIds.sort()).toEqual([1, 2]);
   });
+  it('ouders via eigen tag, ook met &, en (l & e) geeft twee kaarten', () => {
+    db.prepare("update profiles set tag='m' where name='Papa'").run();
+    db.prepare("update profiles set tag='e' where name='Mama'").run();
+    const ps = listProfiles(db);
+    expect(routeByTag('Vergadering (m)', ps)).toEqual({ title: 'Vergadering', profileIds: [3] });
+    expect(routeByTag('Grote Club Actie (KSV) (l & e)', ps)).toEqual({ title: 'Grote Club Actie (KSV)', profileIds: [2, 4] });
+    expect(routeByTag('Sporten (E)', ps).profileIds).toEqual([4]);
+  });
+  it('zonder tag op een ouder gaat (m) naar Gezin met tag in de titel', () => {
+    const ps = listProfiles(db);
+    const r = routeByTag('Vergadering (m)', ps);
+    expect(r.title).toBe('Vergadering (m)');
+    expect(r.profileIds).toEqual([ps.find((p) => p.role === 'family')!.id]);
+  });
   it('onbekende haakjes blijven staan en gaan naar Gezin', () => {
     const ps = listProfiles(db);
     const r = routeByTag('Uit eten (met oma)', ps);
