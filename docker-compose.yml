@@ -8,7 +8,9 @@ services:
     volumes:
       - ./data:/data
     environment:
-      TZ: Europe/Amsterdam
+      # Proces draait in UTC; de planner rekent zelf in PLANNER_TZ.
+      TZ: UTC
+      PLANNER_TZ: Europe/Amsterdam
     env_file:
       - path: .env
         required: false

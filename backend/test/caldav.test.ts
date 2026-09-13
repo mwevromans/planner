@@ -109,6 +109,17 @@ describe('icsToEvents', () => {
     expect(ev.map((e) => e.date)).toEqual(['2026-09-08', '2026-09-15', '2026-09-29']);
     expect(ev[0]).toMatchObject({ profileId: 2, dayPart: 'namiddag', time: '15:00' });
   });
+  it('hele-dag-herhaling op di+do valt op precies die dagen, één dag per keer', () => {
+    const ps = listProfiles(db);
+    const ev = icsToEvents([vcal('BEGIN:VEVENT\nUID:ob\nDTSTART;VALUE=DATE:20260106\nDTEND;VALUE=DATE:20260107\nRRULE:FREQ=WEEKLY;UNTIL=20261231;BYDAY=TU,TH\nSUMMARY:Oma oppassen\nEND:VEVENT')], { from: '2026-09-07', toExclusive: '2026-09-21' }, ps);
+    expect(ev.map((e) => e.date)).toEqual(['2026-09-08', '2026-09-10', '2026-09-15', '2026-09-17']);
+    expect(ev.every((e) => e.allDay && e.time === null)).toBe(true);
+  });
+  it('herhalende afspraak houdt de kloktijd over de zomertijdgrens', () => {
+    const ps = listProfiles(db);
+    const ev = icsToEvents([vcal('BEGIN:VEVENT\nUID:dst\nDTSTART;TZID=Europe/Amsterdam:20261019T183000\nDTEND;TZID=Europe/Amsterdam:20261019T193000\nRRULE:FREQ=WEEKLY;COUNT=3\nSUMMARY:Training\nEND:VEVENT')], { from: '2026-10-19', toExclusive: '2026-11-09' }, ps);
+    expect(ev.map((e) => `${e.date} ${e.time}`)).toEqual(['2026-10-19 18:30', '2026-10-26 18:30', '2026-11-02 18:30']);
+  });
   it('afspraak voor twee kinderen geeft twee kaarten; geannuleerd wordt overgeslagen', () => {
     const ps = listProfiles(db);
     const ev = icsToEvents([

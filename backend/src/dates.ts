@@ -4,12 +4,12 @@ export function isIsoDate(s: string): boolean {
   return ISO.test(s) && !Number.isNaN(Date.parse(s + 'T00:00:00Z'));
 }
 
+const TZ = process.env.PLANNER_TZ ?? 'Europe/Amsterdam';
+const todayFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** Datum van vandaag in de tijdzone van het gezin, ongeacht de tijdzone van het proces. */
 export function today(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return todayFmt.format(new Date());
 }
 
 export function addDays(date: string, n: number): string {
