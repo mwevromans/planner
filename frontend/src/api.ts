@@ -51,6 +51,8 @@ export const api = {
   approvals: () => call<Approvals>('GET', '/approvals'),
 
   overview: (date: string) => call<Overview>('GET', `/overview?date=${date}`),
+  syncStatus: () => call<SyncStatus>('GET', '/sync/status'),
+  syncNow: () => call<SyncStatus>('POST', '/sync/now'),
   familyWeek: (start: string) => call<FamilyWeek>('GET', `/family-week?start=${start}`),
 };
 
@@ -78,3 +80,5 @@ export interface RecurrenceInput {
   time?: string | null;
   active?: boolean;
 }
+
+export interface SyncStatus { configured: boolean; calendar: string | null; lastSync: string | null; lastError: string | null; count: number; running: boolean }

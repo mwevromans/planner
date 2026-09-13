@@ -39,10 +39,31 @@ ververst zichzelf elke minuut:
 ```bash
 cd backend && npm install && npm run dev      # API op :3000, database in backend/data/
 cd frontend && npm install && npm run dev     # UI op :5173, proxied naar :3000
-cd backend && npm test                        # 60 tests, in-memory SQLite
+cd backend && npm test                        # 73 tests, in-memory SQLite
 ```
 
 Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
+
+## Apple-gezinsagenda koppelen (alleen lezen)
+
+Afspraken uit een iCloud-agenda verschijnen als alleen-lezen kaarten met een
+-badge. Zonder tag komen ze op Gezin en dus op ieders bord. Zet **(s)** of **(l)**
+achter de titel in Apple om de afspraak op het bord van Sepp of Liz te zetten;
+`(s,l)` of `(s)(l)` zet hem bij beiden. Het gaat op de eerste letter of de volledige
+naam van een kind, dus `(Sepp)` werkt ook.
+
+1. Maak een app-specifiek wachtwoord op https://account.apple.com → *Inloggen en
+   beveiliging* → *App-specifieke wachtwoorden*. Dit kun je altijd intrekken.
+2. Kopieer `.env.example` naar `.env` en vul `CALDAV_USER` (je Apple ID),
+   `CALDAV_PASSWORD` (het app-specifieke wachtwoord) en `CALDAV_CALENDAR` (de naam van
+   de agenda precies zoals in de Agenda-app) in.
+3. `docker compose up -d --build`. Het ouderpaneel → Gezin toont de status en een
+   knop *Nu synchroniseren*. De planner haalt elke 10 minuten op, van vorige week tot
+   acht weken vooruit.
+
+Tijd bepaalt het dagdeel: vóór 12 uur ochtend, tot 15 uur middag, tot 18 uur na
+school, daarna avond. Hele-dag- en meerdaagse afspraken staan bovenaan elke dag.
+Afspraken tellen niet mee voor streak of goedkeuring; het zijn geen taken.
 
 ## Home Assistant
 
@@ -87,6 +108,7 @@ token voor `Authorization: Bearer`. (O) = alleen ouders.
 | `GET /approvals` (O) | alles wat wacht op een ouder |
 | `GET /overview?date=` | dagoverzicht hele gezin (publiek) |
 | `GET /family-week?start=maandag` | weekoverzicht hele gezin (publiek) |
+| `GET /sync/status`, `POST /sync/now` (O) | status van en handmatig starten van de agenda-sync |
 | `GET /kids/:id/summary` | cijfers voor Home Assistant (publiek) |
 
 ## Regels

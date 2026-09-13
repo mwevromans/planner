@@ -7,4 +7,9 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/data
+    environment:
+      TZ: Europe/Amsterdam
+    env_file:
+      - path: .env
+        required: false
     restart: unless-stopped

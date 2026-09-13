@@ -20,16 +20,18 @@ interface Props {
 }
 
 export function CardView({ card, onTap, draggable = true, big = false, showDeadline = true, family = false }: Props) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `card:${card.id}`, data: { card }, disabled: !draggable });
+  const canDrag = draggable && !card.source;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `card:${card.id}`, data: { card }, disabled: !canDrag });
   return (
-    <div ref={setNodeRef} {...(draggable ? { ...listeners, ...attributes } : {})} role="button" tabIndex={0}
-      className={`card ${cardStatus(card) !== 'open' ? 'done' : ''} ${isDragging ? 'dragging' : ''} ${big ? 'big' : ''} ${family ? 'family' : ''}`}
+    <div ref={setNodeRef} {...(canDrag ? { ...listeners, ...attributes } : {})} role="button" tabIndex={0}
+      className={`card ${cardStatus(card) !== 'open' ? 'done' : ''} ${isDragging ? 'dragging' : ''} ${big ? 'big' : ''} ${family ? 'family' : ''} ${card.source ? 'external' : ''}`}
       style={{ background: card.color }}
       onClick={() => onTap?.(card)}
       onKeyDown={(e) => { if (e.key === 'Enter') onTap?.(card); }}
     >
       <CardInner card={card} showDeadline={showDeadline} />
       {family && <span className="badge family">🏠</span>}
+      {card.source && !family && <span className="badge external" title="Uit de Apple-agenda"></span>}
     </div>
   );
 }

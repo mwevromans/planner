@@ -234,3 +234,7 @@ h1, h2, h3 { margin: 0; }
 .card.compact .title { font-size: 13px; }
 .overview .kid-head .chips .chip { font-size: 14px; padding: 6px 10px; white-space: nowrap; }
 .overview .kid-head { flex-wrap: wrap; row-gap: 6px; }
+
+/* Afspraken uit de gekoppelde agenda */
+.card.external { border: 2px solid rgba(99,102,241,.35); box-shadow: none; }
+.card .badge.external { background: #1f2937; color: #fff; font-size: 12px; }

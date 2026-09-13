@@ -19,7 +19,8 @@ export function celebrate() {
   confetti({ particleCount: 140, spread: 80, origin: { y: 0.7 }, scalar: 1.1 });
 }
 
-export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props) {
+export function CardPanel({ card, onClose, onChanged, readOnly: readOnlyProp = false }: Props) {
+  const readOnly = readOnlyProp || !!card.source;
   const me = useSession()!.profile;
   const isParent = me.role === 'parent';
   const canEdit = isParent || card.created_by === me.id;
@@ -55,11 +56,13 @@ export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props)
               {card.deadline && <span className="chip" style={{ color: deadlineLabel(card.deadline).late && status === 'open' ? 'var(--bad)' : undefined }}>📅 Moet af vóór {longDate(card.deadline)}</span>}
               {card.points > 0 && <span className="chip">⭐ {card.points} punten</span>}
               {card.recurrence_id && <span className="chip">🔁 Elke week</span>}
+              {card.source && <span className="chip"> Apple-agenda</span>}
             </div>
             {card.notes && <p style={{ whiteSpace: 'pre-wrap', fontWeight: 600 }}>{card.notes}</p>}
             {error && <div className="error" style={{ marginBottom: 10 }}>{error}</div>}
             <div className="actions">
-              {readOnly && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
+              {readOnly && card.source && <div className="status wait" style={{ flex: '1 1 100%' }}> Deze afspraak komt uit de Apple-agenda. Aanpassen doe je daar.</div>}
+              {readOnly && !card.source && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
               {!readOnly && status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
               {!readOnly && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
               {!readOnly && status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}

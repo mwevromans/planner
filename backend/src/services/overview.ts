@@ -43,7 +43,7 @@ export function familyWeek(db: Db, start: string) {
 export function summary(db: Db, kidId: number, today: string) {
   const kid = getProfile(db, kidId);
   materializeWeek(db, kid.id, weekStart(today));
-  const cards: Card[] = cardsForRange(db, kid.id, today, addDays(today, 1));
+  const cards: Card[] = cardsForRange(db, kid.id, today, addDays(today, 1)).filter((c) => !c.source);
   const pending = (db
     .prepare('select count(*) as n from cards where profile_id=? and done_at is not null and approved_at is null and points>0 and skipped=0')
     .get(kid.id) as { n: number }).n;

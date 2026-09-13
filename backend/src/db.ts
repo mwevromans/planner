@@ -57,6 +57,19 @@ create table if not exists rewards(
   cost integer not null,
   active integer not null default 1
 );
+create table if not exists external_events(
+  id integer primary key,
+  uid text not null,
+  profile_id integer not null,
+  title text not null,
+  date text not null,
+  day_part text not null,
+  time text,
+  all_day integer not null default 0,
+  location text not null default '',
+  synced_at text not null
+);
+create index if not exists external_events_date on external_events(profile_id, date);
 create table if not exists redemptions(
   id integer primary key,
   profile_id integer not null references profiles(id) on delete cascade,

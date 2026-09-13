@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { api } from '../../api';
+import { useEffect, useState } from 'react';
+import { api, type SyncStatus } from '../../api';
 import { Avatar } from '../../components/Avatar';
 import { ColorPicker } from '../../components/CardForm';
 import { AVATARS } from '../../icons';
@@ -9,6 +9,7 @@ export function Family({ profiles, onChanged }: { profiles: Profile[]; onChanged
   const [edit, setEdit] = useState<Profile | 'new' | null>(null);
   return (
     <div className="section">
+      <SyncBox />
       <div className="box" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2>👨‍👩‍👧‍👦 Gezin</h2>
         {profiles.map((p) => (
@@ -91,5 +92,35 @@ function ProfileForm({ initial, onDone }: { initial?: Profile; onDone: () => voi
         <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>Opslaan</button>
       </div>
     </form>
+  );
+}
+
+function SyncBox() {
+  const [st, setSt] = useState<SyncStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => api.syncStatus().then(setSt).catch(() => undefined);
+  useEffect(() => { load(); }, []);
+  if (!st) return null;
+  const when = st.lastSync ? new Date(st.lastSync).toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) : 'nog niet';
+  return (
+    <div className="box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <h2> Apple-agenda</h2>
+      {!st.configured && (
+        <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
+          Niet gekoppeld. Zet CALDAV_USER, CALDAV_PASSWORD en CALDAV_CALENDAR in het .env-bestand naast docker-compose.yml en herstart de container. Zie README.
+        </p>
+      )}
+      {st.configured && (
+        <>
+          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
+            Agenda "{st.calendar}" · {st.count} afspraakdagen · laatste sync {when}
+            {st.running ? ' · bezig…' : ''}
+          </p>
+          {st.lastError && <div className="error">Laatste fout: {st.lastError}</div>}
+          <p className="muted" style={{ margin: 0, fontWeight: 600 }}>Tip: zet (s) of (l) achter een titel in Apple om de afspraak op het bord van Sepp of Liz te zetten. Zonder tag komt hij op Gezin.</p>
+          <button className="btn btn-small" disabled={busy} onClick={async () => { setBusy(true); try { setSt(await api.syncNow()); } finally { setBusy(false); } }}>🔄 Nu synchroniseren</button>
+        </>
+      )}
+    </div>
   );
 }

@@ -36,6 +36,8 @@ export interface Card {
   approved_at: string | null;
   approved_by: number | null;
   created_at: string;
+  /** Gezet voor alleen-lezen kaarten uit een gekoppelde agenda. */
+  source?: 'apple';
 }
 
 export interface Recurrence {
