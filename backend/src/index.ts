@@ -17,8 +17,18 @@ startSyncLoop(db, configFromEnv(), () => listProfiles(db), Number(process.env.CA
 
 const dist = process.env.FRONTEND_DIR ?? path.join(here, '..', '..', 'frontend', 'dist');
 if (fs.existsSync(dist)) {
-  app.use(express.static(dist));
-  app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+  // Bestanden met hash in de naam mogen lang gecachet worden; alles anders (vooral index.html) niet,
+  // zodat een nieuwe versie na een herbouw direct doorkomt op iPad en in de PWA.
+  app.use(express.static(dist, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      res.setHeader('Cache-Control', filePath.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache');
+    },
+  }));
+  app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(dist, 'index.html'));
+  });
 }
 
 const port = Number(process.env.PORT ?? 3000);
