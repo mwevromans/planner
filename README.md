@@ -56,8 +56,10 @@ geen tag zijn, zoals `(KSV)`, blijven gewoon in de titel staan.
 1. Maak een app-specifiek wachtwoord op https://account.apple.com → *Inloggen en
    beveiliging* → *App-specifieke wachtwoorden*. Dit kun je altijd intrekken.
 2. Kopieer `.env.example` naar `.env` en vul `CALDAV_USER` (je Apple ID),
-   `CALDAV_PASSWORD` (het app-specifieke wachtwoord) en `CALDAV_CALENDAR` (de naam van
-   de agenda precies zoals in de Agenda-app) in.
+   `CALDAV_PASSWORD` (het app-specifieke wachtwoord) en `CALDAV_CALENDARS` in. Dat is een
+   lijst van agenda's met een standaardbestemming voor afspraken zonder tag, bijvoorbeeld
+   `Family=gezin,Sepp en Liz=Sepp+Liz`: de gezinsagenda naar Gezin, de kinderagenda naar
+   beide kinderen. Tags achter de titel gaan altijd voor.
 3. `docker compose up -d --build`. Het ouderpaneel → Gezin toont de status en een
    knop *Nu synchroniseren*. De planner haalt elke 10 minuten op, van vorige week tot
    acht weken vooruit.

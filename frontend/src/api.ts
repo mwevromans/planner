@@ -81,4 +81,4 @@ export interface RecurrenceInput {
   active?: boolean;
 }
 
-export interface SyncStatus { configured: boolean; calendar: string | null; lastSync: string | null; lastError: string | null; count: number; running: boolean }
+export interface SyncStatus { configured: boolean; calendars: string[]; lastSync: string | null; lastError: string | null; count: number; running: boolean }

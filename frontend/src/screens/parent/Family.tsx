@@ -114,13 +114,13 @@ function SyncBox({ profiles }: { profiles: Profile[] }) {
       <h2> Apple-agenda</h2>
       {!st.configured && (
         <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
-          Niet gekoppeld. Zet CALDAV_USER, CALDAV_PASSWORD en CALDAV_CALENDAR in het .env-bestand naast docker-compose.yml en herstart de container. Zie README.
+          Niet gekoppeld. Zet CALDAV_USER, CALDAV_PASSWORD en CALDAV_CALENDARS in het .env-bestand naast docker-compose.yml en herstart de container. Zie README.
         </p>
       )}
       {st.configured && (
         <>
           <p className="muted" style={{ margin: 0, fontWeight: 600 }}>
-            Agenda "{st.calendar}" · {st.count} afspraakdagen · laatste sync {when}
+            Agenda{st.calendars.length > 1 ? "'s" : ''} {st.calendars.map((c) => `"${c}"`).join(', ')} · {st.count} afspraakdagen · laatste sync {when}
             {st.running ? ' · bezig…' : ''}
           </p>
           {st.lastError && <div className="error">Laatste fout: {st.lastError}</div>}

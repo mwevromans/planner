@@ -6,21 +6,54 @@ import type { Card, DayPart, Profile } from '../types.js';
 
 export const TZ = 'Europe/Amsterdam';
 
+export interface CalendarMapping {
+  /** Naam van de agenda in Apple. */
+  name: string;
+  /** Standaardbestemming zonder tag: profielnamen, of 'gezin'. */
+  targets: string[];
+}
+
 export interface CaldavConfig {
   url: string;
   username: string;
   password: string;
-  calendar: string;
+  calendars: CalendarMapping[];
+}
+
+/**
+ * CALDAV_CALENDARS="Family=gezin,Sepp en Liz=Sepp+Liz". Zonder '=' geldt 'gezin'.
+ * Oudere configuratie met alleen CALDAV_CALENDAR blijft werken.
+ */
+export function parseCalendars(spec: string): CalendarMapping[] {
+  return spec.split(',').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const [name, target] = part.split('=').map((x) => x.trim());
+    const targets = (target ?? 'gezin').split('+').map((x) => x.trim()).filter(Boolean);
+    return { name, targets: targets.length ? targets : ['gezin'] };
+  });
 }
 
 export function configFromEnv(env = process.env): CaldavConfig | null {
-  if (!env.CALDAV_USER || !env.CALDAV_PASSWORD || !env.CALDAV_CALENDAR) return null;
+  const spec = env.CALDAV_CALENDARS ?? env.CALDAV_CALENDAR;
+  if (!env.CALDAV_USER || !env.CALDAV_PASSWORD || !spec) return null;
   return {
     url: env.CALDAV_URL ?? 'https://caldav.icloud.com',
     username: env.CALDAV_USER,
     password: env.CALDAV_PASSWORD,
-    calendar: env.CALDAV_CALENDAR,
+    calendars: parseCalendars(spec),
   };
+}
+
+/** Zet bestemmingsnamen om naar profiel-ids; 'gezin' of 'family' is het gezinsprofiel. */
+export function resolveTargets(targets: string[], profiles: Profile[]): number[] {
+  const ids = targets.map((t) => {
+    const key = t.toLowerCase();
+    const p = key === 'gezin' || key === 'family'
+      ? profiles.find((x) => x.role === 'family')
+      : profiles.find((x) => x.name.toLowerCase() === key || (x.tag && x.tag === key));
+    if (!p) throw new Error(`Bestemming "${t}" is geen gezinslid`);
+    return p.id;
+  });
+  return [...new Set(ids)];
 }
 
 /** Eén dag van een (eventueel meerdaagse) afspraak, gekoppeld aan één profiel. */
@@ -63,7 +96,7 @@ export function dayPartFor(time: string | null): DayPart {
  * "(s)(l)" of een volledige naam "(Sepp)". Elk profiel heeft een eigen tag (ouderpaneel → Gezin).
  * Haakjes die geen tags zijn blijven in de titel staan. Zonder tag: het gezinsprofiel.
  */
-export function routeByTag(summary: string, profiles: Profile[]): { title: string; profileIds: number[] } {
+export function routeByTag(summary: string, profiles: Profile[], defaultIds?: number[]): { title: string; profileIds: number[] } {
   const family = profiles.find((p) => p.role === 'family');
   const people = profiles.filter((p) => p.role !== 'family');
   const ids = new Set<number>();
@@ -77,7 +110,7 @@ export function routeByTag(summary: string, profiles: Profile[]): { title: strin
     matched.forEach((p) => ids.add(p!.id));
     title = title.slice(0, m.index).trim();
   }
-  if (ids.size === 0 && family) ids.add(family.id);
+  if (ids.size === 0) (defaultIds?.length ? defaultIds : family ? [family.id] : []).forEach((id) => ids.add(id));
   return { title: title || summary.trim(), profileIds: [...ids] };
 }
 
@@ -103,7 +136,7 @@ function instancesOf(ev: VEvent, range: Range): { start: Date; end: Date }[] {
 }
 
 /** Zet ruwe ICS-teksten om naar kaart-dagen binnen het bereik. Puur, zonder netwerk of database. */
-export function icsToEvents(icsList: string[], range: Range, profiles: Profile[]): ExternalEvent[] {
+export function icsToEvents(icsList: string[], range: Range, profiles: Profile[], defaultIds?: number[]): ExternalEvent[] {
   const out: ExternalEvent[] = [];
   for (const ics of icsList) {
     const parsed = ical.sync.parseICS(ics);
@@ -112,7 +145,7 @@ export function icsToEvents(icsList: string[], range: Range, profiles: Profile[]
       const ev = item as VEvent;
       if (!ev.start || ev.status === 'CANCELLED') continue;
       const allDay = (ev.datetype ?? '') === 'date';
-      const { title, profileIds } = routeByTag(String(ev.summary ?? '(zonder titel)'), profiles);
+      const { title, profileIds } = routeByTag(String(ev.summary ?? '(zonder titel)'), profiles, defaultIds);
       for (const inst of instancesOf(ev, range)) {
         const firstDay = allDay ? inst.start.toISOString().slice(0, 10) : localDate(inst.start);
         // Einde is exclusief; een afspraak die om 00:00 eindigt hoort niet bij die dag.
@@ -165,14 +198,14 @@ export function externalCards(db: Db, profileId: number, from: string, toExclusi
   }));
 }
 
-export interface SyncStatus { configured: boolean; calendar: string | null; lastSync: string | null; lastError: string | null; count: number; running: boolean }
-const status: SyncStatus = { configured: false, calendar: null, lastSync: null, lastError: null, count: 0, running: false };
+export interface SyncStatus { configured: boolean; calendars: string[]; lastSync: string | null; lastError: string | null; count: number; running: boolean }
+const status: SyncStatus = { configured: false, calendars: [], lastSync: null, lastError: null, count: 0, running: false };
 
 export function syncStatus(db: Db): SyncStatus {
   return { ...status, count: (db.prepare('select count(*) as n from external_events').get() as { n: number }).n };
 }
 
-export async function fetchIcs(cfg: CaldavConfig, range: Range): Promise<string[]> {
+export async function fetchIcs(cfg: CaldavConfig, range: Range): Promise<{ mapping: CalendarMapping; ics: string[] }[]> {
   const client = await createDAVClient({
     serverUrl: cfg.url,
     credentials: { username: cfg.username, password: cfg.password },
@@ -180,21 +213,25 @@ export async function fetchIcs(cfg: CaldavConfig, range: Range): Promise<string[
     defaultAccountType: 'caldav',
   });
   const calendars = await client.fetchCalendars();
-  const cal = calendars.find((c) => String(c.displayName ?? '').toLowerCase() === cfg.calendar.toLowerCase());
-  if (!cal) throw new Error(`Agenda "${cfg.calendar}" niet gevonden. Beschikbaar: ${calendars.map((c) => c.displayName).join(', ')}`);
-  const objects = await client.fetchCalendarObjects({
-    calendar: cal,
-    timeRange: { start: new Date(range.from + 'T00:00:00Z').toISOString(), end: new Date(range.toExclusive + 'T00:00:00Z').toISOString() },
-  });
-  return objects.map((o) => o.data as string).filter(Boolean);
+  const eventCals = calendars.filter((c) => !c.components || c.components.includes('VEVENT'));
+  const timeRange = { start: new Date(range.from + 'T00:00:00Z').toISOString(), end: new Date(range.toExclusive + 'T00:00:00Z').toISOString() };
+  const out: { mapping: CalendarMapping; ics: string[] }[] = [];
+  for (const mapping of cfg.calendars) {
+    const cal = eventCals.find((c) => String(c.displayName ?? '').toLowerCase() === mapping.name.toLowerCase());
+    if (!cal) throw new Error(`Agenda "${mapping.name}" niet gevonden. Beschikbaar: ${eventCals.map((c) => c.displayName).join(', ')}`);
+    const objects = await client.fetchCalendarObjects({ calendar: cal, timeRange });
+    out.push({ mapping, ics: objects.map((o) => o.data as string).filter(Boolean) });
+  }
+  return out;
 }
 
 export async function syncOnce(db: Db, cfg: CaldavConfig, profiles: Profile[]): Promise<SyncStatus> {
-  status.configured = true; status.calendar = cfg.calendar; status.running = true;
+  status.configured = true; status.calendars = cfg.calendars.map((c) => c.name); status.running = true;
   try {
     const range = syncRange();
-    const ics = await fetchIcs(cfg, range);
-    storeEvents(db, icsToEvents(ics, range, profiles), range);
+    const fetched = await fetchIcs(cfg, range);
+    const events = fetched.flatMap(({ mapping, ics }) => icsToEvents(ics, range, profiles, resolveTargets(mapping.targets, profiles)));
+    storeEvents(db, events, range);
     status.lastSync = nowIso(); status.lastError = null;
   } catch (err) {
     status.lastError = err instanceof Error ? err.message : String(err);
@@ -204,8 +241,8 @@ export async function syncOnce(db: Db, cfg: CaldavConfig, profiles: Profile[]): 
 }
 
 export function startSyncLoop(db: Db, cfg: CaldavConfig | null, listProfiles: () => Profile[], minutes = 10): void {
-  if (!cfg) { console.log('CalDAV niet geconfigureerd (CALDAV_USER, CALDAV_PASSWORD, CALDAV_CALENDAR)'); return; }
-  status.configured = true; status.calendar = cfg.calendar;
+  if (!cfg) { console.log('CalDAV niet geconfigureerd (CALDAV_USER, CALDAV_PASSWORD, CALDAV_CALENDARS)'); return; }
+  status.configured = true; status.calendars = cfg.calendars.map((c) => c.name);
   const run = () => syncOnce(db, cfg, listProfiles());
   run();
   setInterval(run, minutes * 60_000).unref();

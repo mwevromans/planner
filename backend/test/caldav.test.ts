@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../src/db.js';
-import { dayPartFor, icsToEvents, routeByTag, storeEvents, syncRange } from '../src/services/caldav.js';
+import { configFromEnv, dayPartFor, icsToEvents, parseCalendars, resolveTargets, routeByTag, storeEvents, syncRange } from '../src/services/caldav.js';
 import { listProfiles } from '../src/services/profiles.js';
 import { appWith, as, loginAs, testDb } from './helpers.js';
 
@@ -44,6 +44,34 @@ describe('routeByTag', () => {
     const r = routeByTag('Uit eten (met oma)', ps);
     expect(r.title).toBe('Uit eten (met oma)');
     expect(r.profileIds).toEqual([ps.find((p) => p.role === 'family')!.id]);
+  });
+});
+
+describe('meerdere agenda\'s', () => {
+  it('parseCalendars en oude CALDAV_CALENDAR', () => {
+    expect(parseCalendars('Family=gezin, Sepp en Liz=Sepp+Liz')).toEqual([
+      { name: 'Family', targets: ['gezin'] }, { name: 'Sepp en Liz', targets: ['Sepp', 'Liz'] },
+    ]);
+    expect(parseCalendars('Family')).toEqual([{ name: 'Family', targets: ['gezin'] }]);
+    const cfg = configFromEnv({ CALDAV_USER: 'u', CALDAV_PASSWORD: 'p', CALDAV_CALENDAR: 'Family' } as NodeJS.ProcessEnv);
+    expect(cfg?.calendars).toEqual([{ name: 'Family', targets: ['gezin'] }]);
+    expect(configFromEnv({ CALDAV_USER: 'u' } as NodeJS.ProcessEnv)).toBeNull();
+  });
+  it('resolveTargets: namen, tags en gezin; onbekend geeft fout', () => {
+    const ps = listProfiles(db);
+    const fam = ps.find((p) => p.role === 'family')!.id;
+    expect(resolveTargets(['Sepp', 'liz'], ps)).toEqual([1, 2]);
+    expect(resolveTargets(['s', 'l'], ps)).toEqual([1, 2]);
+    expect(resolveTargets(['gezin'], ps)).toEqual([fam]);
+    expect(() => resolveTargets(['Oma'], ps)).toThrow(/Oma/);
+  });
+  it('kinderagenda zonder tag gaat naar beide kinderen, met tag naar één', () => {
+    const ps = listProfiles(db);
+    const ev = icsToEvents([
+      vcal('BEGIN:VEVENT\nUID:k1\nDTSTART;TZID=Europe/Amsterdam:20260916T100000\nDTEND;TZID=Europe/Amsterdam:20260916T110000\nSUMMARY:Schoolreisje\nEND:VEVENT'),
+      vcal('BEGIN:VEVENT\nUID:k2\nDTSTART;TZID=Europe/Amsterdam:20260917T183000\nDTEND;TZID=Europe/Amsterdam:20260917T193000\nSUMMARY:Voetbaltraining (s)\nEND:VEVENT'),
+    ], RANGE, ps, [1, 2]);
+    expect(ev.map((e) => [e.profileId, e.title])).toEqual([[1, 'Schoolreisje'], [2, 'Schoolreisje'], [1, 'Voetbaltraining']]);
   });
 });
 
@@ -129,7 +157,7 @@ describe('opslag en weergave', () => {
     const sepp = as(app, await loginAs(app, 'Sepp'));
     expect((await sepp.get('/api/sync/status')).status).toBe(403);
     const st = await papa.get('/api/sync/status');
-    expect(st.body).toMatchObject({ configured: false, count: 0 });
+    expect(st.body).toMatchObject({ configured: false, count: 0, calendars: [] });
     expect((await papa.post('/api/sync/now')).status).toBe(409);
   });
 });
