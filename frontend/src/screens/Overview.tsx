@@ -2,22 +2,29 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Avatar } from '../components/Avatar';
 import { CardInner, cardStatus } from '../components/Card';
-import { longDate, today } from '../dates';
+import { addDays, longDate, today } from '../dates';
 import { DAY_PARTS, DAY_PART_LABEL, type Overview as OverviewData } from '../types';
 
 export function Overview() {
+  const [date, setDate] = useState(today());
   const [data, setData] = useState<OverviewData | null>(null);
   useEffect(() => {
-    const load = () => api.overview(today()).then(setData).catch(() => undefined);
+    const load = () => api.overview(date).then(setData).catch(() => undefined);
     load();
     const id = window.setInterval(load, 60_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [date]);
   if (!data) return <div className="center muted">Laden…</div>;
+  const isToday = date === today();
   return (
     <div className="screen">
       <div className="header">
-        <h1 style={{ fontSize: 28 }}>📅 {longDate(data.date)}</h1>
+        <div className="weeknav">
+          <button className="icon-btn" onClick={() => setDate(addDays(date, -1))} aria-label="Vorige dag">‹</button>
+          <h1 style={{ fontSize: 26, minWidth: 260, textAlign: 'center' }}>📅 {isToday ? 'Vandaag · ' : ''}{longDate(data.date)}</h1>
+          <button className="icon-btn" onClick={() => setDate(addDays(date, 1))} aria-label="Volgende dag">›</button>
+          {!isToday && <button className="btn btn-small" onClick={() => setDate(today())}>Vandaag</button>}
+        </div>
         <span className="spacer" />
         <a className="btn btn-small" href="#/gezin">📺 Hele week</a>
         <a className="btn btn-ghost muted" href="#/">Inloggen</a>
@@ -33,7 +40,7 @@ export function Overview() {
                 {k.streak !== null && k.streak > 0 && <span className="chip">🔥 {k.streak}</span>}
               </span>
             </div>
-            {k.cards.length === 0 && <div className="muted" style={{ fontWeight: 700 }}>Niets gepland vandaag 🎈</div>}
+            {k.cards.length === 0 && <div className="muted" style={{ fontWeight: 700 }}>Niets gepland {isToday ? 'vandaag' : 'deze dag'} 🎈</div>}
             {DAY_PARTS.map((part) => {
               const items = k.cards.filter((c) => c.day_part === part);
               if (items.length === 0) return null;
