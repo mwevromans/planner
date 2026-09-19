@@ -46,7 +46,9 @@ const server = http.createServer(async (req, res) => {
   const t0 = Date.now();
   try {
     const out = await withLock(sessionId ?? `new-${t0}-${Math.random()}`, () => engines[engine]({ systemPrompt, message, sessionId: sessionId ?? null }));
-    json(res, 200, { ...out, engine, durationMs: Date.now() - t0 });
+    const ms = Date.now() - t0;
+    console.log(`[${engine}] ok ${(ms / 1000).toFixed(1)}s sessie=${(out.sessionId ?? '').slice(0, 8)} vraag=${message.length} tekens antwoord=${out.reply.length} tekens`);
+    json(res, 200, { ...out, engine, durationMs: ms });
   } catch (err) {
     console.error(`[${engine}] fout:`, err.message);
     json(res, 502, { error: err.message, engine, durationMs: Date.now() - t0 });

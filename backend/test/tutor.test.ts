@@ -85,6 +85,17 @@ describe('huiswerkhulp', () => {
     expect((await papa.get('/api/tutor/status')).body.unread).toBe(0);
     expect((await sepp.get('/api/tutor/status')).status).toBe(403);
   });
+  it('motor omschakelen vóór het eerste bericht telt; daarna blijft het gesprek bij zijn motor', async () => {
+    const c = (await sepp.post('/api/tutor/1/conversations', {})).body;
+    expect(c.engine).toBe('claude');
+    await papa.patch('/api/tutor/settings/1', { engine: 'codex' });
+    await sepp.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'hoi' });
+    expect(calls[0].engine).toBe('codex');
+    expect((await sepp.get(`/api/tutor/conversations/${c.id}`)).body.engine).toBe('codex');
+    await papa.patch('/api/tutor/settings/1', { engine: 'claude' });
+    await sepp.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'en dan' });
+    expect(calls[1].engine).toBe('codex'); // sessie loopt al bij codex
+  });
   it('zonder bridge: nette 503, bericht van kind niet dubbel geteld', async () => {
     const app2 = createApp(db, { bridge: null });
     const s = as(app2, await loginAs(app2, 'Sepp'));

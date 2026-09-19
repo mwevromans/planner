@@ -151,10 +151,13 @@ export async function sendMessage(
   if (!clean) throw new PlannerError(400, 'Typ eerst een vraag');
 
   const systemPrompt = buildSystemPrompt(kid, s, card ?? (conv.card_title ? { title: conv.card_title, notes: '' } : null));
+  // Zolang het gesprek nog geen sessie bij een motor heeft, volgt het de actuele motorkeuze van de ouders.
+  const engine: Engine = conv.session_id ? conv.engine : s.engine;
+  if (engine !== conv.engine) db.prepare('update tutor_conversations set engine=? where id=?').run(engine, conv.id);
   const kidMsg = insertMessage(db, conv.id, 'kid', clean);
   let reply: { reply: string; sessionId: string | null };
   try {
-    reply = await bridge({ engine: conv.engine, systemPrompt, message: clean, sessionId: conv.session_id });
+    reply = await bridge({ engine, systemPrompt, message: clean, sessionId: conv.session_id });
   } catch (err) {
     console.error('tutor bridge:', err);
     throw new PlannerError(503, 'De huiswerkhulp kon even niet antwoorden. Probeer het nog een keer.');
