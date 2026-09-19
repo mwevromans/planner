@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api';
 import { go } from '../../App';
 import { Avatar } from '../../components/Avatar';
-import type { Profile, TutorConversation, TutorSettings, TutorStatus } from '../../types';
+import { ENGINE_ICON, ENGINE_NAME, type Profile, type TutorConversation, type TutorSettings, type TutorStatus } from '../../types';
 
 export function TutorTab({ kids }: { kids: Profile[] }) {
   const [status, setStatus] = useState<TutorStatus | null>(null);
@@ -38,7 +38,7 @@ export function TutorTab({ kids }: { kids: Profile[] }) {
         <h2>🦉 Huiswerkhulp</h2>
         {status && (
           <div className="muted" style={{ fontWeight: 700 }}>
-            {status.configured ? (status.reachable ? `Tussenstuk bereikbaar · motoren: ${status.engines.join(', ')}` : 'Tussenstuk niet bereikbaar, controleer de tutor-bridge service op de host') : 'Niet geconfigureerd: zet TUTOR_BRIDGE_URL en TUTOR_SECRET in .env'}
+            {status.configured ? (status.reachable ? `Tussenstuk bereikbaar · ${ENGINE_ICON.claude} Claude en ${ENGINE_ICON.codex} Codex beschikbaar` : 'Tussenstuk niet bereikbaar, controleer de tutor-bridge service op de host') : 'Niet geconfigureerd: zet TUTOR_BRIDGE_URL en TUTOR_SECRET in .env'}
             {status.unread > 0 ? ` · ${status.unread} ongelezen` : ''}
           </div>
         )}
@@ -60,8 +60,8 @@ export function TutorTab({ kids }: { kids: Profile[] }) {
               </label>
               <label>Motor</label>
               <div className="segmented">
-                <button type="button" className={settings.engine === 'claude' ? 'on' : ''} onClick={() => patch({ engine: 'claude' })}>Claude</button>
-                <button type="button" className={settings.engine === 'codex' ? 'on' : ''} onClick={() => patch({ engine: 'codex' })}>Codex</button>
+                <button type="button" className={settings.engine === 'claude' ? 'on' : ''} onClick={() => patch({ engine: 'claude' })}>{ENGINE_ICON.claude} Claude</button>
+                <button type="button" className={settings.engine === 'codex' ? 'on' : ''} onClick={() => patch({ engine: 'codex' })}>{ENGINE_ICON.codex} Codex</button>
               </div>
               <label>Spraakstand (standaard voor {kid.name}; het kind kan het zelf aan- en uitzetten)</label>
               <div className="segmented">
@@ -81,10 +81,10 @@ export function TutorTab({ kids }: { kids: Profile[] }) {
           {list.length === 0 && <div className="muted" style={{ fontWeight: 700 }}>Nog geen gesprekken.</div>}
           {list.map((c) => (
             <button key={c.id} className="list-item" style={{ textAlign: 'left', background: c.read_by_parent ? '#fffdf5' : '#fef3c7', boxShadow: 'none' }} onClick={() => go(`/hulp/${kid.id}/${c.id}`)}>
-              <span className="icon">{c.read_by_parent ? '💬' : '🆕'}</span>
+              <span className="icon">{ENGINE_ICON[c.engine]}</span>
               <span className="body">
-                <div className="title">{c.card_title ? `📌 ${c.card_title}` : c.preview || 'Gesprek'}</div>
-                <div className="sub">{when(c.last_at)} · {c.count} berichten · {c.engine}</div>
+                <div className="title">{!c.read_by_parent && <span className="pill wacht" style={{ marginRight: 6 }}>nieuw</span>}{c.card_title ? `📌 ${c.card_title}` : c.preview || 'Gesprek'}</div>
+                <div className="sub">{when(c.last_at)} · {c.count} berichten · {ENGINE_NAME[c.engine]}</div>
               </span>
             </button>
           ))}

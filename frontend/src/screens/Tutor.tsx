@@ -4,7 +4,7 @@ import { go } from '../App';
 import { Header } from '../components/Header';
 import { useSession } from '../session';
 import { listen, speak as speakText, speechSupported } from '../speech';
-import type { Profile, TutorConversation, TutorMessage, TutorSettings } from '../types';
+import { ENGINE_ICON, type Profile, type TutorConversation, type TutorMessage, type TutorSettings } from '../types';
 
 interface Props { kidId: number; conversationId?: number; cardId?: number }
 
@@ -123,7 +123,7 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
           <div className="tutor-list">
             {list.map((c) => (
               <button key={c.id} className={`tutor-item ${c.id === conv?.id ? 'on' : ''}`} onClick={() => go(`/hulp/${kidId}/${c.id}`)}>
-                <div className="title">{c.card_title ? `📌 ${c.card_title}` : c.preview || 'Gesprek'}</div>
+                <div className="title">{ENGINE_ICON[c.engine]} {c.card_title ? `📌 ${c.card_title}` : c.preview || 'Gesprek'}</div>
                 <div className="sub">{new Date(c.last_at.includes('T') ? c.last_at : c.last_at + 'Z').toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' })} · {c.count} berichten</div>
               </button>
             ))}
@@ -133,7 +133,7 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
         <section className="tutor-chat">
           {!conv && (
             <div className="tutor-welcome">
-              <div style={{ fontSize: 56 }}>🦉</div>
+              <div style={{ fontSize: 56 }}>{ENGINE_ICON[settings?.engine ?? 'claude']}</div>
               <h2>Hoi {profile.name}!</h2>
               <p>Ik help je met je huiswerk. Ik zeg niet het antwoord, maar ik help je het zelf te vinden. Vraag maar!</p>
               {!isParent && <button className="btn btn-primary" onClick={start} disabled={!!off}>Begin een gesprek</button>}
@@ -145,12 +145,12 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
                 {conv.card_title && <div className="tutor-context">📌 Je werkt aan: {conv.card_title}</div>}
                 {conv.messages.map((m) => (
                   <div key={m.id} className={`bubble ${m.role}`}>
-                    {m.role === 'tutor' && <span className="owl">🦉</span>}
+                    {m.role === 'tutor' && <span className="owl" title={conv.engine}>{ENGINE_ICON[conv.engine]}</span>}
                     <div className="bubble-text">{m.text}</div>
                     {m.role === 'tutor' && <button className="speak" onClick={() => speak(m)} title="Lees voor">{speaking === m.id ? '⏹️' : '🔊'}</button>}
                   </div>
                 ))}
-                {busy && <div className="bubble tutor thinking"><span className="owl">🦉</span><div className="bubble-text">even denken<span className="dots">…</span></div></div>}
+                {busy && <div className="bubble tutor thinking"><span className="owl">{ENGINE_ICON[conv.engine]}</span><div className="bubble-text">even denken<span className="dots">…</span></div></div>}
                 <div ref={bottom} />
               </div>
               {error && <div className="error" style={{ padding: '0 12px 8px' }}>{error}</div>}
