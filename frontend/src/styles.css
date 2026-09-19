@@ -267,3 +267,8 @@ h1, h2, h3 { margin: 0; }
 .tutor-input input { flex: 1; padding: 14px 16px; border-radius: 999px; border: 2px solid var(--line); background: #fffdf5; font-size: 19px; font-weight: 600; }
 .density-simple .bubble .bubble-text, .density-simple .tutor-input input { font-size: 22px; }
 @media (max-width: 760px) { .tutor-body { flex-direction: column; } .tutor-side { width: auto; } .tutor-list { flex-direction: row; } .tutor-item { min-width: 180px; } }
+.tutor-input .mic { width: 60px; height: 60px; border-radius: 50%; background: var(--paper); box-shadow: var(--shadow); font-size: 28px; flex: none; border: 3px solid transparent; }
+.tutor-input .mic.listening { background: #fee2e2; border-color: var(--bad); animation: pulse 1s infinite; }
+.tutor-input .mic:disabled { opacity: .4; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.density-simple .tutor-input .mic { width: 72px; height: 72px; font-size: 34px; }

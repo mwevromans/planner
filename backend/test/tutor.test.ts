@@ -73,7 +73,8 @@ describe('huiswerkhulp', () => {
     expect((await sepp.patch('/api/tutor/settings/1', { enabled: true })).status).toBe(403);
   });
   it('motorkeuze per kind en ongelezen-teller voor ouders', async () => {
-    await papa.patch('/api/tutor/settings/2', { engine: 'codex', extraPrompt: 'Liz houdt van paarden.' });
+    await papa.patch('/api/tutor/settings/2', { engine: 'codex', extraPrompt: 'Liz houdt van paarden.', voice: true });
+    expect((await liz.get('/api/tutor/settings/2')).body.voice).toBe(1);
     const c = (await liz.post('/api/tutor/2/conversations', {})).body;
     expect(c.engine).toBe('codex');
     await liz.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'hoi' });
@@ -105,7 +106,7 @@ describe('huiswerkhulp', () => {
     const prev = process.env.TUTOR_PROMPT_DIR;
     process.env.TUTOR_PROMPT_DIR = '/nonexistent-dir';
     try {
-      expect(() => buildSystemPrompt(getProfile(db, 1), { profile_id: 1, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: '' })).toThrow(/basisdocument/);
+      expect(() => buildSystemPrompt(getProfile(db, 1), { profile_id: 1, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: '', voice: 0 })).toThrow(/basisdocument/);
       const c = (await sepp.post('/api/tutor/1/conversations', {})).body;
       const r = await sepp.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'hoi' });
       expect(r.status).toBe(503);
@@ -114,7 +115,7 @@ describe('huiswerkhulp', () => {
     } finally { if (prev === undefined) delete process.env.TUTOR_PROMPT_DIR; else process.env.TUTOR_PROMPT_DIR = prev; }
   });
   it('buildSystemPrompt bevat basis, kind-tekst, extra en kaart', () => {
-    const p = buildSystemPrompt(getProfile(db, 1), { profile_id: 1, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: 'Extra.' }, { title: 'Lezen', notes: 'hfst 3' });
+    const p = buildSystemPrompt(getProfile(db, 1), { profile_id: 1, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: 'Extra.', voice: 0 }, { title: 'Lezen', notes: 'hfst 3' });
     expect(p).toContain('## Zo help je');
     expect(p).toContain('Sepp');
     expect(p).toContain('Extra.');

@@ -94,7 +94,8 @@ create table if not exists tutor_settings(
   enabled integer not null default 1,
   daily_cap integer not null default 40,
   engine text not null default 'claude',
-  extra_prompt text not null default ''
+  extra_prompt text not null default '',
+  voice integer not null default 0
 );
 create table if not exists tutor_conversations(
   id integer primary key,
@@ -139,6 +140,8 @@ export function openDb(path: string): Db {
 function migrate(db: Db) {
   const cols = (db.prepare('pragma table_info(profiles)').all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes('tag')) db.exec('alter table profiles add column tag text');
+  const tcols = (db.prepare('pragma table_info(tutor_settings)').all() as { name: string }[]).map((c) => c.name);
+  if (tcols.length && !tcols.includes('voice')) db.exec('alter table tutor_settings add column voice integer not null default 0');
   const sql = (db.prepare("select sql from sqlite_master where type='table' and name='profiles'").get() as { sql: string }).sql;
   if (sql.includes("'family'")) return;
   db.exec(`

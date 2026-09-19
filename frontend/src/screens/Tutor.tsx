@@ -3,6 +3,7 @@ import { api, ApiError } from '../api';
 import { go } from '../App';
 import { Header } from '../components/Header';
 import { useSession } from '../session';
+import { listen, speak as speakText, speechSupported } from '../speech';
 import type { Profile, TutorConversation, TutorMessage, TutorSettings } from '../types';
 
 interface Props { kidId: number; conversationId?: number; cardId?: number }
@@ -19,11 +20,22 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [speaking, setSpeaking] = useState<number | null>(null);
+  const [voice, setVoice] = useState<boolean | null>(null); // null = nog niet bepaald (standaard van ouders)
+  const [listening, setListening] = useState(false);
+  const [heard, setHeard] = useState('');
+  const stopListen = useRef<(() => void) | null>(null);
+  const autoSend = useRef(false);
+  const lastSpoken = useRef<number | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const voiceKey = `planner.voice.${kidId}`;
+  const voiceOn = !!voice;
 
   useEffect(() => { api.profiles().then((ps) => setProfile(ps.find((p) => p.id === kidId) ?? null)); }, [kidId]);
   const loadSide = useCallback(() => {
-    api.tutorSettings(kidId).then(setSettings).catch(() => undefined);
+    api.tutorSettings(kidId).then((st) => {
+      setSettings(st);
+      setVoice((v) => { if (v !== null) return v; try { const saved = localStorage.getItem(voiceKey); return saved === null ? !!st.voice : saved === '1'; } catch { return !!st.voice; } });
+    }).catch(() => undefined);
     api.tutorConversations(kidId).then(setList).catch(() => undefined);
   }, [kidId]);
   useEffect(() => { loadSide(); }, [loadSide]);
@@ -57,6 +69,7 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
       const r = await api.sendTutorMessage(conv.id, t);
       setConv((c) => c ? { ...c, messages: [...c.messages.filter((m) => m.id !== -1), r.kid, r.tutor] } : c);
       setSettings((s) => s ? { ...s, usedToday: r.usedToday } : s);
+      if (voiceOn && lastSpoken.current !== r.tutor.id) { lastSpoken.current = r.tutor.id; setSpeaking(r.tutor.id); speakText(r.tutor.text, () => setSpeaking(null)); }
     } catch (e) {
       setConv((c) => c ? { ...c, messages: c.messages.filter((m) => m.id !== -1) } : c);
       setText(t);
@@ -65,15 +78,33 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
   }
 
   function speak(m: TutorMessage) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    if (speaking === m.id) { setSpeaking(null); return; }
-    const u = new SpeechSynthesisUtterance(m.text);
-    u.lang = 'nl-NL'; u.rate = 0.95;
-    u.onend = () => setSpeaking(null);
+    if (speaking === m.id) { window.speechSynthesis?.cancel(); setSpeaking(null); return; }
     setSpeaking(m.id);
-    window.speechSynthesis.speak(u);
+    speakText(m.text, () => setSpeaking(null));
   }
+
+  function toggleVoice() {
+    const next = !voiceOn;
+    setVoice(next);
+    try { localStorage.setItem(voiceKey, next ? '1' : '0'); } catch { /* prive-modus */ }
+    if (!next) { window.speechSynthesis?.cancel(); setSpeaking(null); }
+  }
+
+  function startListening() {
+    if (listening) { stopListen.current?.(); return; }
+    window.speechSynthesis?.cancel(); setSpeaking(null);
+    setError(''); setHeard(''); setListening(true);
+    autoSend.current = voiceOn;
+    stopListen.current = listen(
+      (t, final) => { setHeard(t); if (final) setText(t); },
+      (err) => {
+        setListening(false); stopListen.current = null;
+        if (err) { setError(err); return; }
+        if (autoSend.current) setTimeout(() => { sendRef.current(); }, 400);
+      },
+    );
+  }
+  const sendRef = useRef(send); sendRef.current = send;
 
   if (!profile) return <div className="center muted">Laden…</div>;
   const left = settings ? Math.max(0, settings.daily_cap - (settings.usedToday ?? 0)) : null;
@@ -87,6 +118,7 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
       <div className="tutor-body">
         <aside className="tutor-side">
           <button className="btn btn-primary" onClick={start} disabled={!!off || isParent}>💬 Nieuw gesprek</button>
+          {!isParent && <button className={`btn btn-small ${voiceOn ? 'btn-good' : ''}`} onClick={toggleVoice} title="Praten en voorlezen aan of uit">{voiceOn ? '🎙️ Praten: aan' : '⌨️ Praten: uit'}</button>}
           {settings && !isParent && <div className="muted tutor-left">{off ? 'De huiswerkhulp staat uit.' : `Nog ${left} vragen vandaag`}</div>}
           <div className="tutor-list">
             {list.map((c) => (
@@ -124,8 +156,13 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
               {error && <div className="error" style={{ padding: '0 12px 8px' }}>{error}</div>}
               {!isParent && (
                 <form className="tutor-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
-                  <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder={off ? 'De huiswerkhulp staat uit' : 'Typ je vraag…'} disabled={busy || !!off || left === 0} autoFocus maxLength={2000} />
-                  <button type="submit" className="btn btn-primary" disabled={busy || !text.trim() || !!off || left === 0}>Stuur</button>
+                  {speechSupported() && (
+                    <button type="button" className={`mic ${listening ? 'listening' : ''}`} onClick={startListening} disabled={busy || !!off || left === 0} title={listening ? 'Stop met luisteren' : 'Spreek je vraag in'}>
+                      🎙️
+                    </button>
+                  )}
+                  <input type="text" value={listening ? heard : text} onChange={(e) => setText(e.target.value)} placeholder={off ? 'De huiswerkhulp staat uit' : listening ? 'Ik luister…' : voiceOn ? 'Tik op de microfoon en praat' : 'Typ je vraag…'} disabled={busy || !!off || left === 0 || listening} autoFocus={!voiceOn} maxLength={2000} />
+                  <button type="submit" className="btn btn-primary" disabled={busy || !text.trim() || !!off || left === 0 || listening}>Stuur</button>
                 </form>
               )}
               {isParent && <div className="muted" style={{ padding: 12, fontWeight: 700 }}>Je leest mee; chatten doet {profile.name} zelf.</div>}

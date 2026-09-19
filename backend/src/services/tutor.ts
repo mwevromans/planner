@@ -10,7 +10,7 @@ import { isParent } from '../auth.js';
 export type Engine = 'claude' | 'codex';
 export const ENGINES: Engine[] = ['claude', 'codex'];
 
-export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: Engine; extra_prompt: string }
+export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: Engine; extra_prompt: string; voice: number }
 export interface Conversation { id: number; profile_id: number; engine: Engine; session_id: string | null; card_title: string | null; started_at: string; last_at: string; read_by_parent: number }
 export interface Message { id: number; conversation_id: number; role: 'kid' | 'tutor'; text: string; created_at: string }
 
@@ -19,6 +19,7 @@ export const settingsPatch = z.object({
   dailyCap: z.number().int().min(0).max(1000).optional(),
   engine: z.enum(['claude', 'codex']).optional(),
   extraPrompt: z.string().max(4000).optional(),
+  voice: z.boolean().optional(),
 });
 
 /** Aanroep van het tussenstuk op de host. Injecteerbaar voor tests. */
@@ -74,7 +75,7 @@ export function buildSystemPrompt(kid: Profile, settings: TutorSettings, card?: 
 
 export function getSettings(db: Db, profileId: number): TutorSettings {
   const row = db.prepare('select * from tutor_settings where profile_id=?').get(profileId) as unknown as TutorSettings | undefined;
-  return row ?? { profile_id: profileId, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: '' };
+  return row ?? { profile_id: profileId, enabled: 1, daily_cap: 40, engine: 'claude', extra_prompt: '', voice: 0 };
 }
 
 export function updateSettings(db: Db, profileId: number, patch: z.infer<typeof settingsPatch>): TutorSettings {
@@ -84,9 +85,10 @@ export function updateSettings(db: Db, profileId: number, patch: z.infer<typeof 
     daily_cap: patch.dailyCap ?? cur.daily_cap,
     engine: patch.engine ?? cur.engine,
     extra_prompt: patch.extraPrompt ?? cur.extra_prompt,
+    voice: patch.voice === undefined ? cur.voice : patch.voice ? 1 : 0,
   };
-  db.prepare('insert or replace into tutor_settings(profile_id, enabled, daily_cap, engine, extra_prompt) values (?,?,?,?,?)')
-    .run(profileId, next.enabled, next.daily_cap, next.engine, next.extra_prompt);
+  db.prepare('insert or replace into tutor_settings(profile_id, enabled, daily_cap, engine, extra_prompt, voice) values (?,?,?,?,?,?)')
+    .run(profileId, next.enabled, next.daily_cap, next.engine, next.extra_prompt, next.voice);
   return getSettings(db, profileId);
 }
 

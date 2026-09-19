@@ -63,6 +63,11 @@ export function TutorTab({ kids }: { kids: Profile[] }) {
                 <button type="button" className={settings.engine === 'claude' ? 'on' : ''} onClick={() => patch({ engine: 'claude' })}>Claude</button>
                 <button type="button" className={settings.engine === 'codex' ? 'on' : ''} onClick={() => patch({ engine: 'codex' })}>Codex</button>
               </div>
+              <label>Spraakstand (standaard voor {kid.name}; het kind kan het zelf aan- en uitzetten)</label>
+              <div className="segmented">
+                <button type="button" className={settings.voice ? 'on' : ''} onClick={() => patch({ voice: true })}>🎙️ Praten en voorlezen</button>
+                <button type="button" className={!settings.voice ? 'on' : ''} onClick={() => patch({ voice: false })}>⌨️ Typen</button>
+              </div>
               <label>Extra instructies voor {kid.name} (bovenop het basisdocument)
                 <textarea value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Bijv. Deze week oefenen we de tafel van 7." maxLength={4000} />
               </label>

@@ -78,7 +78,9 @@ huiswerkhulp die vragen terugstelt en hints geeft, maar nooit het antwoord of ee
 in te leveren tekst. De regels staan in `tutor/basis.md`, per kind aangevuld met
 `tutor/<naam>.md`. Ouders lezen alle gesprekken terug in Ouderpaneel → Huiswerkhulp,
 zetten per kind een dagplafond, kiezen de motor (Claude Code of Codex CLI) en kunnen
-extra instructies toevoegen zonder herbouw. Geen API-tokens: de motor draait onder
+extra instructies toevoegen zonder herbouw. Spraakstand per kind: vraag inspreken via de
+microfoonknop (spraakherkenning van de browser, Nederlands) en antwoorden automatisch
+voorgelezen; het kind kan het zelf aan- en uitzetten. Geen API-tokens: de motor draait onder
 het abonnement van de ouder op de host.
 
 Onderdelen:

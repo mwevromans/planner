@@ -52,7 +52,7 @@ export const api = {
 
   tutorStatus: () => call<TutorStatus>('GET', '/tutor/status'),
   tutorSettings: (kidId: number) => call<TutorSettings>('GET', `/tutor/settings/${kidId}`),
-  updateTutorSettings: (kidId: number, p: { enabled?: boolean; dailyCap?: number; engine?: 'claude' | 'codex'; extraPrompt?: string }) => call<TutorSettings>('PATCH', `/tutor/settings/${kidId}`, p),
+  updateTutorSettings: (kidId: number, p: { enabled?: boolean; dailyCap?: number; engine?: 'claude' | 'codex'; extraPrompt?: string; voice?: boolean }) => call<TutorSettings>('PATCH', `/tutor/settings/${kidId}`, p),
   tutorConversations: (kidId: number) => call<TutorConversation[]>('GET', `/tutor/${kidId}/conversations`),
   startTutorConversation: (kidId: number, cardId?: number) => call<TutorConversation>('POST', `/tutor/${kidId}/conversations`, cardId ? { cardId } : {}),
   tutorConversation: (id: number) => call<TutorConversation & { messages: TutorMessage[] }>('GET', `/tutor/conversations/${id}`),

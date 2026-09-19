@@ -77,7 +77,7 @@ export function sortMembers(ps: Profile[]): Profile[] {
 }
 
 export type TutorEngine = 'claude' | 'codex';
-export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: TutorEngine; extra_prompt: string; usedToday?: number; configured?: boolean }
+export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: TutorEngine; extra_prompt: string; voice: number; usedToday?: number; configured?: boolean }
 export interface TutorConversation { id: number; profile_id: number; engine: TutorEngine; session_id: string | null; card_title: string | null; started_at: string; last_at: string; read_by_parent: number; preview?: string; count?: number }
 export interface TutorMessage { id: number; conversation_id: number; role: 'kid' | 'tutor'; text: string; created_at: string }
 export interface TutorStatus { configured: boolean; reachable: boolean; engines: string[]; unread: number }
