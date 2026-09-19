@@ -36,6 +36,14 @@ describe('huiswerkhulp', () => {
     const full = await sepp.get(`/api/tutor/conversations/${c.body.id}`);
     expect(full.body.messages.map((x: any) => x.role)).toEqual(['kid', 'tutor', 'kid', 'tutor']);
   });
+  it('een leeg gesprek wordt hergebruikt bij opnieuw starten', async () => {
+    const a = (await sepp.post('/api/tutor/1/conversations', {})).body;
+    const b = (await sepp.post('/api/tutor/1/conversations', {})).body;
+    expect(b.id).toBe(a.id);
+    await sepp.post(`/api/tutor/conversations/${a.id}/messages`, { text: 'hoi' });
+    const c = (await sepp.post('/api/tutor/1/conversations', {})).body;
+    expect(c.id).not.toBe(a.id);
+  });
   it('kaartcontext gaat mee in de systeemprompt', async () => {
     const card = (await papa.post('/api/cards', { title: 'Huiswerk rekenen', icon: '🧮', color: '#fde68a', profileId: 1, notes: 'blz 12' })).body;
     const c = await sepp.post('/api/tutor/1/conversations', { cardId: card.id });

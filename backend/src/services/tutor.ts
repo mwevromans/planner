@@ -124,6 +124,12 @@ export function startConversation(db: Db, user: Profile, profileId: number, card
   canAccess(user, profileId);
   const s = getSettings(db, profileId);
   if (!s.enabled) throw new PlannerError(409, 'De huiswerkhulp staat uit. Vraag het aan papa of mama.');
+  // Een leeg gesprek met dezelfde context hergebruiken in plaats van er nog een aan te maken.
+  const empty = db.prepare(
+    `select c.* from tutor_conversations c where c.profile_id=? and coalesce(c.card_title,'') = coalesce(?, '')
+     and not exists (select 1 from tutor_messages m where m.conversation_id=c.id) order by c.id desc limit 1`,
+  ).get(profileId, card?.title ?? null) as unknown as Conversation | undefined;
+  if (empty) return empty;
   const r = db.prepare('insert into tutor_conversations(profile_id, engine, card_title) values (?,?,?)').run(profileId, s.engine, card?.title ?? null);
   return db.prepare('select * from tutor_conversations where id=?').get(Number(r.lastInsertRowid)) as unknown as Conversation;
 }
