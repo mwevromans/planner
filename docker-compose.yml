@@ -11,6 +11,8 @@ services:
       # Proces draait in UTC; de planner rekent zelf in PLANNER_TZ.
       TZ: UTC
       PLANNER_TZ: Europe/Amsterdam
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - path: .env
         required: false

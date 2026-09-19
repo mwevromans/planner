@@ -1,0 +1,10 @@
+{
+  "name": "tutor-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Klein tussenstuk op de host: ontvangt een chatbericht en roept claude -p of codex exec aan.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

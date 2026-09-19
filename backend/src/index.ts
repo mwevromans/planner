@@ -31,5 +31,10 @@ if (fs.existsSync(dist)) {
   });
 }
 
+{
+  const tutorDir = process.env.TUTOR_PROMPT_DIR ?? path.join(here, '..', '..', 'tutor');
+  console.log(fs.existsSync(path.join(tutorDir, 'basis.md')) ? `Huiswerkhulp-regels: ${tutorDir}` : `WAARSCHUWING: tutor/basis.md niet gevonden in ${tutorDir}; huiswerkhulp weigert te chatten`);
+}
+
 const port = Number(process.env.PORT ?? 3000);
 app.listen(port, () => console.log(`Planner luistert op http://0.0.0.0:${port} (db: ${dbPath})`));

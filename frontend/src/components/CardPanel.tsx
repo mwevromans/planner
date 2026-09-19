@@ -6,6 +6,7 @@ import { useSession } from '../session';
 import { DAY_PART_LABEL, type Card } from '../types';
 import { cardStatus } from './Card';
 import { CardForm, IconPicker } from './CardForm';
+import { go } from '../App';
 
 interface Props {
   card: Card;
@@ -72,6 +73,7 @@ export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props)
               {!readOnly && status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
               {!readOnly && external && status === 'done' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
               {!readOnly && external && <button className="btn" onClick={() => setPickingIcon((v) => !v)}>{pickingIcon ? 'Icoontje sluiten' : '🎨 Icoontje kiezen'}</button>}
+              {!isParent && !external && card.profile_id === me.id && status === 'open' && <button className="btn" onClick={() => go(`/hulp/${me.id}/nieuw/${card.id}`)}>💬 Hulp nodig?</button>}
               {!readOnly && !external && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
               {!readOnly && !external && status === 'done' && isParent && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Ongedaan maken</button>}
               {!readOnly && !external && status === 'done' && !isParent && card.points === 0 && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}

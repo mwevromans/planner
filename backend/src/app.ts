@@ -7,8 +7,11 @@ import { cardRoutes } from './routes/cards.js';
 import { weekAndRecurrenceRoutes } from './routes/recurrences.js';
 import { rewardRoutes } from './routes/rewards.js';
 import { overviewRoutes } from './routes/overview.js';
+import { tutorRoutes } from './routes/tutor.js';
+import { bridgeFromEnv, type BridgeCall } from './services/tutor.js';
 
-export function createApp(db: Db) {
+export function createApp(db: Db, opts: { bridge?: BridgeCall | null } = {}) {
+  const bridge = opts.bridge === undefined ? bridgeFromEnv() : opts.bridge;
   const app = express();
   app.use(express.json());
 
@@ -18,6 +21,7 @@ export function createApp(db: Db) {
   app.use('/api', cardRoutes(db));
   app.use('/api', weekAndRecurrenceRoutes(db));
   app.use('/api', rewardRoutes(db));
+  app.use('/api', tutorRoutes(db, bridge));
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Niet gevonden' }));
 

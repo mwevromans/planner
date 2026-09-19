@@ -28,6 +28,7 @@ export function Header({ profile, balance, streak, children, onProfileChanged }:
       {balance !== undefined && profile.role === 'kid' && (
         <button className="chip" onClick={() => go(`/winkel/${profile.id}`)} title="Winkeltje">⭐ {balance}</button>
       )}
+      {profile.role === 'kid' && !viewingOther && <button className="chip" onClick={() => go(`/hulp/${profile.id}`)} title="Huiswerkhulp">💬 Hulp</button>}
       {streak !== undefined && streak > 0 && profile.role === 'kid' && <span className="chip" title="Dagen op rij alles klaar">🔥 {streak}</span>}
       <span className="spacer" />
       {children}

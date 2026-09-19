@@ -22,6 +22,7 @@ COPY --from=backend /app/backend/dist ./backend/dist
 COPY --from=backend /app/backend/node_modules ./backend/node_modules
 COPY --from=backend /app/backend/package.json ./backend/package.json
 COPY --from=frontend /app/frontend/dist ./frontend/dist
+COPY tutor ./tutor
 VOLUME /data
 EXPOSE 3000
 CMD ["node", "backend/dist/index.js"]

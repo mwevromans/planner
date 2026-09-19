@@ -39,7 +39,7 @@ ververst zichzelf elke minuut:
 ```bash
 cd backend && npm install && npm run dev      # API op :3000, database in backend/data/
 cd frontend && npm install && npm run dev     # UI op :5173, proxied naar :3000
-cd backend && npm test                        # 73 tests, in-memory SQLite
+cd backend && npm test                        # 95 tests, in-memory SQLite
 ```
 
 Vereist Node 24 (gebruikt de ingebouwde `node:sqlite`).
@@ -70,6 +70,38 @@ Geïmporteerde afspraken krijgen de kleur van het bord waarop ze staan en een ic
 op basis van trefwoorden (voetbal ⚽, tandarts 🦷, verjaardag 🎂). Via het kaartpaneel
 kies je een ander icoon; dat geldt dan voor alle afspraken met dezelfde titel op dat
 bord. Afvinken kan, maar telt niet mee voor streak of punten; het zijn geen taken.
+
+## Huiswerkhulp (AI die helpt, niet voordoet)
+
+Kinderen chatten via 💬 Hulp op hun bord of "Hulp nodig?" op een kaart met een
+huiswerkhulp die vragen terugstelt en hints geeft, maar nooit het antwoord of een
+in te leveren tekst. De regels staan in `tutor/basis.md`, per kind aangevuld met
+`tutor/<naam>.md`. Ouders lezen alle gesprekken terug in Ouderpaneel → Huiswerkhulp,
+zetten per kind een dagplafond, kiezen de motor (Claude Code of Codex CLI) en kunnen
+extra instructies toevoegen zonder herbouw. Geen API-tokens: de motor draait onder
+het abonnement van de ouder op de host.
+
+Onderdelen:
+- `tutor-bridge/`: klein tussenstuk op de host (Node, geen dependencies) dat `claude -p`
+  of `codex exec` aanroept met alle tools uit, in een lege werkmap. Draait als
+  systemd-service `tutor-bridge` onder `/opt/tutor-bridge`, configuratie in
+  `/etc/tutor-bridge.env` (geheim, poort, werkmap, modellen, `CLAUDE_CONFIG_DIR`).
+- Planner: `TUTOR_BRIDGE_URL=http://host.docker.internal:3100` en hetzelfde
+  `TUTOR_SECRET` in `.env`; compose geeft de container toegang tot de host.
+
+Installatie op een nieuwe host:
+
+```bash
+npm install -g @anthropic-ai/claude-code @openai/codex   # of één van de twee
+claude login && codex login --device-auth                # eenmalig, als de gebruiker die de service draait
+mkdir -p /opt/tutor-bridge /var/lib/tutor-bridge/work && cp tutor-bridge/*.mjs tutor-bridge/package.json /opt/tutor-bridge/
+# /etc/tutor-bridge.env met TUTOR_SECRET=<lang geheim>, TUTOR_PORT=3100, TUTOR_WORKDIR=/var/lib/tutor-bridge/work
+# systemd-unit: ExecStart=node /opt/tutor-bridge/server.mjs, EnvironmentFile=/etc/tutor-bridge.env
+systemctl enable --now tutor-bridge && curl localhost:3100/health
+```
+
+Na een wijziging in `tutor-bridge/`: bestanden opnieuw kopiëren en `systemctl restart tutor-bridge`.
+Na een wijziging in `tutor/*.md`: container herbouwen (de map zit in de image).
 
 ## Home Assistant
 
@@ -115,6 +147,8 @@ token voor `Authorization: Bearer`. (O) = alleen ouders.
 | `GET /overview?date=` | dagoverzicht hele gezin (publiek) |
 | `GET /family-week?start=maandag` | weekoverzicht hele gezin (publiek) |
 | `GET /sync/status`, `POST /sync/now` (O) | status van en handmatig starten van de agenda-sync |
+| `GET/POST /tutor/:kidId/conversations`, `GET /tutor/conversations/:id`, `POST .../messages` | huiswerkhulp: gesprekken en berichten |
+| `GET/PATCH /tutor/settings/:kidId`, `GET /tutor/status` (O) | plafond, motor, extra instructies, status |
 | `GET /kids/:id/summary` | cijfers voor Home Assistant (publiek) |
 
 ## Regels

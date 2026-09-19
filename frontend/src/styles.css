@@ -238,3 +238,32 @@ h1, h2, h3 { margin: 0; }
 /* Afspraken uit de gekoppelde agenda */
 .card.external { border: 2px solid rgba(0,0,0,.12); box-shadow: none; }
 .card .badge.external { background: #fff; font-size: 13px; }
+
+/* Huiswerkhulp */
+.tutor-body { flex: 1; display: flex; gap: 12px; padding: 0 12px 12px; min-height: 0; }
+.tutor-side { width: 240px; flex: none; display: flex; flex-direction: column; gap: 10px; }
+.tutor-left { font-weight: 700; font-size: 14px; }
+.tutor-list { display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.tutor-item { text-align: left; background: var(--paper); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); }
+.tutor-item.on { outline: 3px solid var(--accent); }
+.tutor-item .title { font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tutor-item .sub { font-size: 12px; color: var(--muted); font-weight: 700; }
+.tutor-chat { flex: 1; display: flex; flex-direction: column; background: var(--paper); border-radius: 24px; box-shadow: var(--shadow); min-height: 60vh; overflow: hidden; }
+.tutor-welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px; }
+.tutor-welcome p { max-width: 420px; font-weight: 600; font-size: 18px; line-height: 1.4; }
+.tutor-messages { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.tutor-context { align-self: center; background: #fef3c7; color: #92400e; font-weight: 800; padding: 6px 14px; border-radius: 999px; font-size: 14px; }
+.bubble { display: flex; align-items: flex-end; gap: 8px; max-width: 85%; }
+.bubble.kid { align-self: flex-end; flex-direction: row-reverse; }
+.bubble .bubble-text { padding: 12px 16px; border-radius: 20px; font-size: 19px; line-height: 1.45; font-weight: 600; white-space: pre-wrap; }
+.bubble.kid .bubble-text { background: var(--accent); color: #fff; border-bottom-right-radius: 6px; }
+.bubble.tutor .bubble-text { background: #fef3c7; border-bottom-left-radius: 6px; }
+.bubble .owl { font-size: 28px; flex: none; }
+.bubble .speak { font-size: 20px; flex: none; opacity: .7; }
+.bubble.thinking .bubble-text { color: var(--muted); font-style: italic; }
+.dots { display: inline-block; animation: blink 1.2s infinite; }
+@keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+.tutor-input { display: flex; gap: 8px; padding: 12px; border-top: 2px solid var(--line); }
+.tutor-input input { flex: 1; padding: 14px 16px; border-radius: 999px; border: 2px solid var(--line); background: #fffdf5; font-size: 19px; font-weight: 600; }
+.density-simple .bubble .bubble-text, .density-simple .tutor-input input { font-size: 22px; }
+@media (max-width: 760px) { .tutor-body { flex-direction: column; } .tutor-side { width: auto; } .tutor-list { flex-direction: row; } .tutor-item { min-width: 180px; } }

@@ -1,5 +1,5 @@
 import { getSession, setSession } from './session';
-import type { Approvals, Card, DayPart, FamilyWeek, Overview, Profile, Recurrence, Redemption, Reward, WeekView } from './types';
+import type { Approvals, Card, DayPart, FamilyWeek, Overview, Profile, Recurrence, Redemption, Reward, TutorConversation, TutorMessage, TutorSettings, TutorStatus, WeekView } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -50,6 +50,13 @@ export const api = {
   denyRedemption: (id: number) => call<Redemption>('POST', `/redemptions/${id}/deny`),
   approvals: () => call<Approvals>('GET', '/approvals'),
 
+  tutorStatus: () => call<TutorStatus>('GET', '/tutor/status'),
+  tutorSettings: (kidId: number) => call<TutorSettings>('GET', `/tutor/settings/${kidId}`),
+  updateTutorSettings: (kidId: number, p: { enabled?: boolean; dailyCap?: number; engine?: 'claude' | 'codex'; extraPrompt?: string }) => call<TutorSettings>('PATCH', `/tutor/settings/${kidId}`, p),
+  tutorConversations: (kidId: number) => call<TutorConversation[]>('GET', `/tutor/${kidId}/conversations`),
+  startTutorConversation: (kidId: number, cardId?: number) => call<TutorConversation>('POST', `/tutor/${kidId}/conversations`, cardId ? { cardId } : {}),
+  tutorConversation: (id: number) => call<TutorConversation & { messages: TutorMessage[] }>('GET', `/tutor/conversations/${id}`),
+  sendTutorMessage: (id: number, text: string) => call<{ kid: TutorMessage; tutor: TutorMessage; usedToday: number; dailyCap: number }>('POST', `/tutor/conversations/${id}/messages`, { text }),
   overview: (date: string) => call<Overview>('GET', `/overview?date=${date}`),
   syncStatus: () => call<SyncStatus>('GET', '/sync/status'),
   syncNow: () => call<SyncStatus>('POST', '/sync/now'),

@@ -89,6 +89,31 @@ create table if not exists sessions(
   profile_id integer not null references profiles(id) on delete cascade,
   created_at text not null default (datetime('now'))
 );
+create table if not exists tutor_settings(
+  profile_id integer primary key references profiles(id) on delete cascade,
+  enabled integer not null default 1,
+  daily_cap integer not null default 40,
+  engine text not null default 'claude',
+  extra_prompt text not null default ''
+);
+create table if not exists tutor_conversations(
+  id integer primary key,
+  profile_id integer not null references profiles(id) on delete cascade,
+  engine text not null,
+  session_id text,
+  card_title text,
+  started_at text not null default (datetime('now')),
+  last_at text not null default (datetime('now')),
+  read_by_parent integer not null default 0
+);
+create table if not exists tutor_messages(
+  id integer primary key,
+  conversation_id integer not null references tutor_conversations(id) on delete cascade,
+  role text not null check(role in ('kid','tutor')),
+  text text not null,
+  created_at text not null default (datetime('now'))
+);
+create index if not exists tutor_messages_conv on tutor_messages(conversation_id, id);
 create table if not exists redemptions(
   id integer primary key,
   profile_id integer not null references profiles(id) on delete cascade,

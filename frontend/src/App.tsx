@@ -7,6 +7,7 @@ import { Shop } from './screens/Shop';
 import { ParentPanel } from './screens/ParentPanel';
 import { Overview } from './screens/Overview';
 import { FamilyWeek } from './screens/FamilyWeek';
+import { Tutor } from './screens/Tutor';
 
 function useHash(): string {
   const [hash, setHash] = useState(location.hash);
@@ -37,6 +38,7 @@ export function App() {
   if (route === 'week' && kidId && mayView(kidId)) return <WeekBoard kidId={kidId} />;
   if (route === 'dag' && kidId && mayView(kidId) && b) return <DayZoom kidId={kidId} date={b} />;
   if (route === 'winkel' && kidId && mayView(kidId)) return <Shop kidId={kidId} />;
+  if (route === 'hulp' && kidId && mayView(kidId)) return <Tutor kidId={kidId} conversationId={b ? Number(b) : undefined} cardId={parts[3] ? Number(parts[3]) : undefined} />;
   if (route === 'ouders' && me.role === 'parent') return <ParentPanel />;
 
   go(me.role === 'parent' ? '/ouders' : `/week/${me.id}`);
