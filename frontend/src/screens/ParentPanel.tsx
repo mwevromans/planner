@@ -14,7 +14,7 @@ type Tab = 'keuren' | 'kaarten' | 'beloningen' | 'hulp' | 'gezin';
 export function ParentPanel() {
   const me = useSession()!.profile;
   const [tab, setTab] = useState<Tab>('keuren');
-  const [approvals, setApprovals] = useState<ApprovalsData>({ cards: [], redemptions: [], external: [] });
+  const [approvals, setApprovals] = useState<ApprovalsData>({ cards: [], redemptions: [], external: [], tutor: [] });
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [unread, setUnread] = useState(0);
 
@@ -25,7 +25,7 @@ export function ParentPanel() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const pending = approvals.cards.length + approvals.external.length + approvals.redemptions.length;
+  const pending = approvals.cards.length + approvals.external.length + approvals.redemptions.length + approvals.tutor.length;
   const kids = sortMembers(profiles);
 
   return (

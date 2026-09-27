@@ -5,8 +5,8 @@ import { requireAuth, requireParent, type AuthedRequest } from '../auth.js';
 import { getProfile } from '../services/profiles.js';
 import { getCard } from '../services/cards.js';
 import {
-  bridgeHealth, getConversation, getSettings, listConversations, markRead, sendMessage, settingsPatch, startConversation,
-  unreadCount, updateSettings, usedToday, type BridgeCall,
+  bridgeHealth, capToday, decideRequest, getConversation, getSettings, listConversations, markRead, requestMore, requestToday,
+  sendMessage, settingsPatch, startConversation, unreadCount, updateSettings, usedToday, type BridgeCall,
 } from '../services/tutor.js';
 import { idParam, wrap } from './util.js';
 
@@ -22,8 +22,11 @@ export function tutorRoutes(db: Db, bridge: BridgeCall | null) {
   r.get('/tutor/settings/:kidId', (req, res) => {
     const kidId = idParam(req, 'kidId');
     const s = getSettings(db, kidId);
-    res.json({ ...s, usedToday: usedToday(db, kidId), configured: !!bridge });
+    res.json({ ...s, usedToday: usedToday(db, kidId), capToday: capToday(db, kidId), request: requestToday(db, kidId), configured: !!bridge });
   });
+  r.post('/tutor/:kidId/more', (req, res) => res.status(201).json(requestMore(db, user(req), idParam(req, 'kidId'))));
+  r.post('/tutor/requests/:id/approve', requireParent, (req, res) => { decideRequest(db, user(req), idParam(req), true); res.status(204).end(); });
+  r.post('/tutor/requests/:id/deny', requireParent, (req, res) => { decideRequest(db, user(req), idParam(req), false); res.status(204).end(); });
   r.patch('/tutor/settings/:kidId', requireParent, (req, res) => {
     const kidId = idParam(req, 'kidId');
     getProfile(db, kidId);

@@ -5,6 +5,7 @@ import { canAccess, requireAuth, requireParent, type AuthedRequest } from '../au
 import { PlannerError } from '../types.js';
 import { pendingCards } from '../services/cards.js';
 import { pendingExternal } from '../services/caldav.js';
+import { pendingRequests } from '../services/tutor.js';
 import { balance, reserved } from '../services/points.js';
 import { listProfiles } from '../services/profiles.js';
 import {
@@ -47,6 +48,7 @@ export function rewardRoutes(db: Db) {
       cards: pendingCards(db).map((c) => ({ ...c, profile: names.get(c.profile_id) })),
       redemptions: pendingRedemptions(db).map((x) => ({ ...x, profile: names.get(x.profile_id) })),
       external: pendingExternal(db).map((x) => ({ ...x, profile: names.get(x.profile_id) })),
+      tutor: pendingRequests(db).map((x) => ({ ...x, profile: names.get(x.profile_id) })),
     });
   });
 

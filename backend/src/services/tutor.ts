@@ -101,6 +101,44 @@ export function usedToday(db: Db, profileId: number): number {
   ).get(profileId, start.toISOString()) as { n: number }).n;
 }
 
+/** Extra vragen per goedgekeurde aanvraag; geldt alleen voor die dag. */
+export const EXTRA_PER_REQUEST = 20;
+
+export interface MoreRequest { id: number; profile_id: number; date: string; requested_at: string; granted: number; decided_at: string | null }
+
+/** Plafond voor vandaag: vast maximum plus wat ouders er vandaag bij gaven. */
+export function capToday(db: Db, profileId: number): number {
+  const extra = (db.prepare('select coalesce(sum(granted),0) as n from tutor_requests where profile_id=? and date=?').get(profileId, today()) as { n: number }).n;
+  return getSettings(db, profileId).daily_cap + extra;
+}
+
+/** Laatste aanvraag van vandaag, met status zoals bij inwisselen: wacht, gekregen of nee. */
+export function requestToday(db: Db, profileId: number): { id: number; status: 'wacht' | 'gekregen' | 'nee' } | null {
+  const r = db.prepare('select * from tutor_requests where profile_id=? and date=? order by id desc limit 1').get(profileId, today()) as unknown as MoreRequest | undefined;
+  if (!r) return null;
+  return { id: r.id, status: !r.decided_at ? 'wacht' : r.granted > 0 ? 'gekregen' : 'nee' };
+}
+
+/** Kind vraagt om meer vragen voor vandaag; alleen als ze op zijn, en hooguit één open aanvraag. */
+export function requestMore(db: Db, user: Profile, profileId: number): MoreRequest {
+  canAccess(user, profileId);
+  const open = db.prepare('select * from tutor_requests where profile_id=? and date=? and decided_at is null').get(profileId, today()) as unknown as MoreRequest | undefined;
+  if (open) return open;
+  if (usedToday(db, profileId) < capToday(db, profileId)) throw new PlannerError(409, 'Je hebt nog vragen over voor vandaag');
+  const r = db.prepare('insert into tutor_requests(profile_id, date, requested_at) values (?,?,?)').run(profileId, today(), nowIso());
+  return db.prepare('select * from tutor_requests where id=?').get(Number(r.lastInsertRowid)) as unknown as MoreRequest;
+}
+
+export function pendingRequests(db: Db): MoreRequest[] {
+  return db.prepare('select * from tutor_requests where decided_at is null order by id').all() as unknown as MoreRequest[];
+}
+
+export function decideRequest(db: Db, parent: Profile, id: number, grant: boolean): void {
+  const r = db.prepare('select id from tutor_requests where id=?').get(id);
+  if (!r) throw new PlannerError(404, 'Aanvraag niet gevonden');
+  db.prepare('update tutor_requests set granted=?, decided_at=?, decided_by=? where id=?').run(grant ? EXTRA_PER_REQUEST : 0, nowIso(), parent.id, id);
+}
+
 function canAccess(user: Profile, profileId: number) {
   if (!isParent(user) && user.id !== profileId) throw new PlannerError(403, 'Dat is niet jouw huiswerkhulp');
 }
@@ -145,7 +183,8 @@ export async function sendMessage(
   const s = getSettings(db, kid.id);
   if (!s.enabled) throw new PlannerError(409, 'De huiswerkhulp staat uit. Vraag het aan papa of mama.');
   const used = usedToday(db, kid.id);
-  if (used >= s.daily_cap) throw new PlannerError(429, 'Je hebt vandaag al veel gevraagd. Morgen kun je weer, of vraag het aan papa of mama.');
+  const cap = capToday(db, kid.id);
+  if (used >= cap) throw new PlannerError(429, 'Je vragen voor vandaag zijn op. Vraag papa of mama om meer, of morgen kun je weer.');
   if (!bridge) throw new PlannerError(503, 'De huiswerkhulp is even niet bereikbaar. Probeer het later, of vraag papa of mama.');
   const clean = text.trim().slice(0, 2000);
   if (!clean) throw new PlannerError(400, 'Typ eerst een vraag');
@@ -164,7 +203,7 @@ export async function sendMessage(
   }
   const tutorMsg = insertMessage(db, conv.id, 'tutor', reply.reply || '…');
   db.prepare('update tutor_conversations set session_id=coalesce(?, session_id), last_at=?, read_by_parent=0 where id=?').run(reply.sessionId, nowIso(), conv.id);
-  return { kid: kidMsg, tutor: tutorMsg, usedToday: used + 1, dailyCap: s.daily_cap };
+  return { kid: kidMsg, tutor: tutorMsg, usedToday: used + 1, dailyCap: cap };
 }
 
 function insertMessage(db: Db, conversationId: number, role: 'kid' | 'tutor', text: string): Message {

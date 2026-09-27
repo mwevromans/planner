@@ -243,6 +243,7 @@ h1, h2, h3 { margin: 0; }
 .tutor-body { flex: 1; display: flex; gap: 12px; padding: 0 12px 12px; min-height: 0; }
 .tutor-side { width: 240px; flex: none; display: flex; flex-direction: column; gap: 10px; }
 .tutor-left { font-weight: 700; font-size: 14px; }
+.tutor-limit { margin: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .tutor-list { display: flex; flex-direction: column; gap: 6px; overflow: auto; }
 .tutor-item { text-align: left; background: var(--paper); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); }
 .tutor-item.on { outline: 3px solid var(--accent); }

@@ -72,6 +72,29 @@ describe('huiswerkhulp', () => {
     expect((await sepp.post('/api/tutor/1/conversations', {})).status).toBe(409);
     expect((await sepp.patch('/api/tutor/settings/1', { enabled: true })).status).toBe(403);
   });
+  it('meer vragen aanvragen: pas als het op is, ouder geeft +20 voor vandaag of wijst af', async () => {
+    await papa.patch('/api/tutor/settings/1', { dailyCap: 1 });
+    const c = (await sepp.post('/api/tutor/1/conversations', {})).body;
+    expect((await sepp.post('/api/tutor/1/more')).status).toBe(409); // nog niet op
+    await sepp.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'a' });
+    const req = await sepp.post('/api/tutor/1/more');
+    expect(req.status).toBe(201);
+    expect((await sepp.post('/api/tutor/1/more')).body.id).toBe(req.body.id); // geen dubbele aanvraag
+    expect((await liz.post('/api/tutor/1/more')).status).toBe(403);
+    expect((await sepp.get('/api/tutor/settings/1')).body).toMatchObject({ capToday: 1, request: { status: 'wacht' } });
+    const pending = (await papa.get('/api/approvals')).body.tutor;
+    expect(pending).toMatchObject([{ id: req.body.id, profile: { name: 'Sepp' } }]);
+    expect((await sepp.post(`/api/tutor/requests/${req.body.id}/approve`)).status).toBe(403);
+    expect((await papa.post(`/api/tutor/requests/${req.body.id}/approve`)).status).toBe(204);
+    expect((await sepp.get('/api/tutor/settings/1')).body).toMatchObject({ daily_cap: 1, capToday: 21, request: { status: 'gekregen' } });
+    expect((await sepp.post(`/api/tutor/conversations/${c.id}/messages`, { text: 'b' })).status).toBe(200);
+    expect((await papa.get('/api/approvals')).body.tutor).toEqual([]);
+    // afwijzen
+    await papa.patch('/api/tutor/settings/2', { dailyCap: 0 });
+    const r2 = (await liz.post('/api/tutor/2/more')).body;
+    expect((await papa.post(`/api/tutor/requests/${r2.id}/deny`)).status).toBe(204);
+    expect((await liz.get('/api/tutor/settings/2')).body).toMatchObject({ capToday: 0, request: { status: 'nee' } });
+  });
   it('motorkeuze per kind en ongelezen-teller voor ouders', async () => {
     await papa.patch('/api/tutor/settings/2', { engine: 'codex', extraPrompt: 'Liz houdt van paarden.', voice: true });
     expect((await liz.get('/api/tutor/settings/2')).body.voice).toBe(1);

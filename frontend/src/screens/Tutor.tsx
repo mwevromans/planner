@@ -39,6 +39,13 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
     api.tutorConversations(kidId).then(setList).catch(() => undefined);
   }, [kidId]);
   useEffect(() => { loadSide(); }, [loadSide]);
+  // Wacht een aanvraag voor meer vragen op papa of mama, kijk dan af en toe of hij al is goedgekeurd.
+  const waiting = settings?.request?.status === 'wacht';
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setInterval(loadSide, 15_000);
+    return () => clearInterval(t);
+  }, [waiting, loadSide]);
 
   useEffect(() => {
     if (conversationId) { api.tutorConversation(conversationId).then(setConv).catch((e) => setError(e.message)); return; }
@@ -74,6 +81,7 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
       setConv((c) => c ? { ...c, messages: c.messages.filter((m) => m.id !== -1) } : c);
       setText(t);
       setError(e instanceof ApiError ? e.message : 'De huiswerkhulp kon even niet antwoorden.');
+      loadSide();
     } finally { setBusy(false); }
   }
 
@@ -107,7 +115,11 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
   const sendRef = useRef(send); sendRef.current = send;
 
   if (!profile) return <div className="center muted">Laden…</div>;
-  const left = settings ? Math.max(0, settings.daily_cap - (settings.usedToday ?? 0)) : null;
+  const left = settings ? Math.max(0, (settings.capToday ?? settings.daily_cap) - (settings.usedToday ?? 0)) : null;
+  async function askMore() {
+    setError('');
+    try { await api.requestMoreTutor(kidId); loadSide(); } catch (e) { setError(e instanceof Error ? e.message : 'Er ging iets mis'); }
+  }
   const off = settings && !settings.enabled;
 
   return (
@@ -131,6 +143,18 @@ export function Tutor({ kidId, conversationId, cardId }: Props) {
           </div>
         </aside>
         <section className="tutor-chat">
+          {!isParent && !off && left === 0 && (
+            <div className="status wait tutor-limit">
+              {settings?.request?.status === 'wacht' ? (
+                <>⏳ Je vraag is verstuurd. Zodra papa of mama ja zegt, kun je verder.</>
+              ) : (
+                <>
+                  <span>{settings?.request?.status === 'nee' ? 'Papa of mama zei nee. Morgen kun je weer vragen stellen.' : 'Je vragen voor vandaag zijn op. Morgen kun je weer, of vraag papa of mama om meer.'}</span>
+                  {settings?.request?.status !== 'nee' && <button className="btn btn-primary btn-small" onClick={askMore}>🙋 Vraag meer aan papa of mama</button>}
+                </>
+              )}
+            </div>
+          )}
           {!conv && (
             <div className="tutor-welcome">
               <div style={{ fontSize: 56 }}>{ENGINE_ICON[settings?.engine ?? 'claude']}</div>

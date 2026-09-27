@@ -5,7 +5,7 @@ import type { Approvals as ApprovalsData } from '../../types';
 
 export function Approvals({ data, onChanged }: { data: ApprovalsData; onChanged: () => void }) {
   const run = async (fn: () => Promise<unknown>, party = false) => { await fn(); if (party) celebrate(); onChanged(); };
-  const empty = data.cards.length === 0 && data.external.length === 0 && data.redemptions.length === 0;
+  const empty = data.cards.length === 0 && data.external.length === 0 && data.redemptions.length === 0 && data.tutor.length === 0;
   return (
     <div className="section">
       {empty && <div className="box muted" style={{ fontWeight: 700 }}>Niets te keuren. Alles is bij 🎈</div>}
@@ -31,6 +31,20 @@ export function Approvals({ data, onChanged }: { data: ApprovalsData; onChanged:
             </span>
             <button className="btn btn-good btn-small" onClick={() => run(() => api.approveExternal(e.doneId), true)}>✓</button>
             <button className="btn btn-bad btn-small" onClick={() => run(() => api.rejectExternal(e.doneId))}>✗</button>
+          </div>
+        ))}
+      </div>
+      {data.tutor.length > 0 && <h2>Wil meer huiswerkhulp vandaag</h2>}
+      <div className="list" style={{ padding: 0 }}>
+        {data.tutor.map((t) => (
+          <div key={t.id} className="list-item">
+            <span className="icon">💬</span>
+            <span className="body">
+              <div className="title">+20 vragen voor vandaag</div>
+              <div className="sub">{t.profile.avatar} {t.profile.name} · vast maximum pas je aan bij Huiswerkhulp</div>
+            </span>
+            <button className="btn btn-good btn-small" onClick={() => run(() => api.approveTutorRequest(t.id))}>✓</button>
+            <button className="btn btn-bad btn-small" onClick={() => run(() => api.denyTutorRequest(t.id))}>✗</button>
           </div>
         ))}
       </div>

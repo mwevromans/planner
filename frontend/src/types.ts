@@ -66,6 +66,8 @@ export interface Approvals {
   cards: (Card & { profile: { name: string; avatar: string } })[];
   redemptions: (Redemption & { profile: { name: string; avatar: string } })[];
   /** Afgevinkte agenda-afspraken met sterren. */
+  /** Kinderen die meer huiswerkhulp-vragen willen voor vandaag. */
+  tutor: { id: number; profile_id: number; requested_at: string; profile: { name: string; avatar: string } }[];
   external: { doneId: number; profile_id: number; title: string; icon: string; date: string; points: number; profile: { name: string; avatar: string } }[];
 }
 
@@ -79,7 +81,7 @@ export function sortMembers(ps: Profile[]): Profile[] {
 }
 
 export type TutorEngine = 'claude' | 'codex';
-export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: TutorEngine; extra_prompt: string; voice: number; usedToday?: number; configured?: boolean }
+export interface TutorSettings { profile_id: number; enabled: number; daily_cap: number; engine: TutorEngine; extra_prompt: string; voice: number; usedToday?: number; capToday?: number; request?: { id: number; status: 'wacht' | 'gekregen' | 'nee' } | null; configured?: boolean }
 export interface TutorConversation { id: number; profile_id: number; engine: TutorEngine; session_id: string | null; card_title: string | null; started_at: string; last_at: string; read_by_parent: number; preview?: string; count?: number }
 export interface TutorMessage { id: number; conversation_id: number; role: 'kid' | 'tutor'; text: string; created_at: string }
 export interface TutorStatus { configured: boolean; reachable: boolean; engines: string[]; unread: number }

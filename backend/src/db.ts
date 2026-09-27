@@ -131,6 +131,15 @@ create table if not exists tutor_messages(
   text text not null,
   created_at text not null default (datetime('now'))
 );
+create table if not exists tutor_requests(
+  id integer primary key,
+  profile_id integer not null references profiles(id) on delete cascade,
+  date text not null,
+  requested_at text not null,
+  granted integer not null default 0,
+  decided_at text,
+  decided_by integer
+);
 create index if not exists tutor_messages_conv on tutor_messages(conversation_id, id);
 create table if not exists redemptions(
   id integer primary key,
