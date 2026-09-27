@@ -5,11 +5,11 @@ import type { Approvals as ApprovalsData } from '../../types';
 
 export function Approvals({ data, onChanged }: { data: ApprovalsData; onChanged: () => void }) {
   const run = async (fn: () => Promise<unknown>, party = false) => { await fn(); if (party) celebrate(); onChanged(); };
-  const empty = data.cards.length === 0 && data.redemptions.length === 0;
+  const empty = data.cards.length === 0 && data.external.length === 0 && data.redemptions.length === 0;
   return (
     <div className="section">
       {empty && <div className="box muted" style={{ fontWeight: 700 }}>Niets te keuren. Alles is bij 🎈</div>}
-      {data.cards.length > 0 && <h2>Afgevinkt, wacht op jouw ✓</h2>}
+      {data.cards.length + data.external.length > 0 && <h2>Afgevinkt, wacht op jouw ✓</h2>}
       <div className="list" style={{ padding: 0 }}>
         {data.cards.map((c) => (
           <div key={c.id} className="list-item">
@@ -20,6 +20,17 @@ export function Approvals({ data, onChanged }: { data: ApprovalsData; onChanged:
             </span>
             <button className="btn btn-good btn-small" onClick={() => run(() => api.approveCard(c.id), true)}>✓</button>
             <button className="btn btn-bad btn-small" onClick={() => run(() => api.rejectCard(c.id))}>✗</button>
+          </div>
+        ))}
+        {data.external.map((e) => (
+          <div key={`e${e.doneId}`} className="list-item">
+            <span className="icon">{e.icon}</span>
+            <span className="body">
+              <div className="title">{e.title} <span className="muted">· ⭐ {e.points}</span></div>
+              <div className="sub">{e.profile.avatar} {e.profile.name} · {shortDate(e.date)} ·  agenda</div>
+            </span>
+            <button className="btn btn-good btn-small" onClick={() => run(() => api.approveExternal(e.doneId), true)}>✓</button>
+            <button className="btn btn-bad btn-small" onClick={() => run(() => api.rejectExternal(e.doneId))}>✗</button>
           </div>
         ))}
       </div>

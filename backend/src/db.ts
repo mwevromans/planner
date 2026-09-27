@@ -82,6 +82,23 @@ create table if not exists external_done(
   uid text not null,
   date text not null,
   done_at text not null,
+  title text not null default '',
+  points integer,
+  approved_at text,
+  approved_by integer,
+  primary key(profile_id, uid, date)
+);
+create table if not exists external_points(
+  profile_id integer not null,
+  title text not null,
+  points integer not null,
+  primary key(profile_id, title)
+);
+create table if not exists external_points_once(
+  profile_id integer not null,
+  uid text not null,
+  date text not null,
+  points integer not null,
   primary key(profile_id, uid, date)
 );
 create table if not exists sessions(
@@ -142,6 +159,13 @@ function migrate(db: Db) {
   if (!cols.includes('tag')) db.exec('alter table profiles add column tag text');
   const tcols = (db.prepare('pragma table_info(tutor_settings)').all() as { name: string }[]).map((c) => c.name);
   if (tcols.length && !tcols.includes('voice')) db.exec('alter table tutor_settings add column voice integer not null default 0');
+  const dcols = (db.prepare('pragma table_info(external_done)').all() as { name: string }[]).map((c) => c.name);
+  if (!dcols.includes('approved_at')) {
+    db.exec(`alter table external_done add column title text not null default '';
+      alter table external_done add column points integer;
+      alter table external_done add column approved_at text;
+      alter table external_done add column approved_by integer;`);
+  }
   const sql = (db.prepare("select sql from sqlite_master where type='table' and name='profiles'").get() as { sql: string }).sql;
   if (sql.includes("'family'")) return;
   db.exec(`

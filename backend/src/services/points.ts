@@ -5,10 +5,13 @@ export function balance(db: Db, profileId: number): number {
   const earned = (db
     .prepare('select coalesce(sum(points),0) as s from cards where profile_id=? and approved_at is not null and skipped=0')
     .get(profileId) as { s: number }).s;
+  const earnedAgenda = (db
+    .prepare('select coalesce(sum(points),0) as s from external_done where profile_id=? and approved_at is not null')
+    .get(profileId) as { s: number }).s;
   const spent = (db
     .prepare('select coalesce(sum(cost),0) as s from redemptions where profile_id=? and approved_at is not null')
     .get(profileId) as { s: number }).s;
-  return earned - spent;
+  return earned + earnedAgenda - spent;
 }
 
 /** Punten die in openstaande inwisselaanvragen vastzitten. */

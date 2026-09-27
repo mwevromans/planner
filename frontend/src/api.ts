@@ -27,13 +27,15 @@ export const api = {
 
   week: (kidId: number, start: string) => call<WeekView>('GET', `/kids/${kidId}/week?start=${start}`),
   createCard: (c: CardInput) => call<Card>('POST', '/cards', c),
-  updateCard: (id: number, c: Partial<CardInput> | { icon: string }) => call<Card>('PATCH', `/cards/${id}`, c),
+  updateCard: (id: number, c: Partial<CardInput> | { icon: string } | { points: number; scope: 'title' | 'once' }) => call<Card>('PATCH', `/cards/${id}`, c),
   moveCard: (id: number, plannedDate: string | null, dayPart: DayPart | null) => call<Card>('PATCH', `/cards/${id}`, { plannedDate, dayPart }),
   deleteCard: (id: number) => call<void>('DELETE', `/cards/${id}`),
   done: (id: number) => call<Card & { needsApproval: boolean }>('POST', `/cards/${id}/done`),
   undone: (id: number) => call<Card>('POST', `/cards/${id}/undone`),
   approveCard: (id: number) => call<Card>('POST', `/cards/${id}/approve`),
   rejectCard: (id: number) => call<Card>('POST', `/cards/${id}/reject`),
+  approveExternal: (doneId: number) => call<void>('POST', `/external-done/${doneId}/approve`),
+  rejectExternal: (doneId: number) => call<void>('POST', `/external-done/${doneId}/reject`),
 
   recurrences: (profileId?: number) => call<Recurrence[]>('GET', `/recurrences${profileId ? `?profileId=${profileId}` : ''}`),
   createRecurrence: (r: RecurrenceInput) => call<Recurrence>('POST', '/recurrences', r),

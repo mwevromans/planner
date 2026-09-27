@@ -65,6 +65,8 @@ export interface WeekView { weekStart: string; cards: Card[]; stack: Card[]; fam
 export interface Approvals {
   cards: (Card & { profile: { name: string; avatar: string } })[];
   redemptions: (Redemption & { profile: { name: string; avatar: string } })[];
+  /** Afgevinkte agenda-afspraken met sterren. */
+  external: { doneId: number; profile_id: number; title: string; icon: string; date: string; points: number; profile: { name: string; avatar: string } }[];
 }
 
 export interface OverviewMember { profile: Profile; cards: Card[]; balance: number | null; streak: number | null }

@@ -215,25 +215,31 @@ export function defaultIcon(title: string, allDay: boolean): string {
   return allDay ? '📅' : '🗓️';
 }
 
-/** Externe afspraken als kaarten (negatieve id, source 'apple'): kleur van het bord, eigen icoon, afvinkbaar. */
+/**
+ * Externe afspraken als kaarten (negatieve id, source 'apple'): kleur van het bord, eigen icoon, afvinkbaar.
+ * Sterren: vastgelegd bij goedkeuring, anders deze keer, anders per titel.
+ */
 export function externalCards(db: Db, profileId: number, from: string, toExclusive: string): (Card & { source: 'apple' })[] {
   const color = (db.prepare('select color from profiles where id=?').get(profileId) as { color: string } | undefined)?.color ?? '#e0e7ff';
   const rows = db
     .prepare(
-      `select e.*, i.icon as icon_override, d.done_at as done_at
+      `select e.*, i.icon as icon_override, d.done_at as done_at, d.approved_at as approved_at, d.approved_by as approved_by,
+         coalesce(d.points, o.points, p.points, 0) as points
        from external_events e
        left join external_icons i on i.profile_id = e.profile_id and i.title = e.title
        left join external_done d on d.profile_id = e.profile_id and d.uid = e.uid and d.date = e.date
+       left join external_points_once o on o.profile_id = e.profile_id and o.uid = e.uid and o.date = e.date
+       left join external_points p on p.profile_id = e.profile_id and p.title = e.title
        where e.profile_id=? and e.date >= ? and e.date < ? order by e.date, e.time is null, e.time, e.id`,
     )
     .all(profileId, from, toExclusive) as unknown as {
       id: number; uid: string; title: string; date: string; day_part: DayPart; time: string | null; all_day: number; location: string;
-      icon_override: string | null; done_at: string | null;
+      icon_override: string | null; done_at: string | null; approved_at: string | null; approved_by: number | null; points: number;
     }[];
   return rows.map((r) => ({
-    id: -r.id, profile_id: profileId, title: r.title, icon: r.icon_override ?? defaultIcon(r.title, !!r.all_day), color, points: 0,
+    id: -r.id, profile_id: profileId, title: r.title, icon: r.icon_override ?? defaultIcon(r.title, !!r.all_day), color, points: r.points,
     deadline: null, planned_date: r.date, day_part: r.day_part, time: r.time, notes: r.location, created_by: 0,
-    recurrence_id: null, origin_date: null, skipped: 0, done_at: r.done_at, approved_at: null, approved_by: null,
+    recurrence_id: null, origin_date: null, skipped: 0, done_at: r.done_at, approved_at: r.approved_at, approved_by: r.approved_by,
     created_at: '', source: 'apple' as const,
   }));
 }
@@ -246,15 +252,89 @@ export function getExternal(db: Db, negativeId: number): ExternalRow {
   return row;
 }
 
-export function setExternalDone(db: Db, user: Profile, negativeId: number, done: boolean): Card {
+function externalCard(db: Db, row: ExternalRow): Card {
+  return externalCards(db, row.profile_id, row.date, addDays(row.date, 1)).find((c) => c.id === -row.id)!;
+}
+
+type DoneRow = { rowid: number; profile_id: number; uid: string; date: string; title: string; done_at: string; points: number | null; approved_at: string | null };
+
+function doneRow(db: Db, row: ExternalRow): DoneRow | undefined {
+  return db.prepare('select rowid, * from external_done where profile_id=? and uid=? and date=?').get(row.profile_id, row.uid, row.date) as DoneRow | undefined;
+}
+
+export function setExternalDone(db: Db, user: Profile, negativeId: number, done: boolean): Card & { needsApproval: boolean } {
   const row = getExternal(db, negativeId);
   if (!isParent(user) && row.profile_id !== user.id) throw new PlannerError(403, 'Dat is niet jouw bord');
+  const existing = doneRow(db, row);
   if (done) {
-    db.prepare('insert or replace into external_done(profile_id, uid, date, done_at) values (?,?,?,?)').run(row.profile_id, row.uid, row.date, nowIso());
-  } else {
-    db.prepare('delete from external_done where profile_id=? and uid=? and date=?').run(row.profile_id, row.uid, row.date);
+    if (!existing) {
+      db.prepare('insert into external_done(profile_id, uid, date, done_at, title) values (?,?,?,?,?)').run(row.profile_id, row.uid, row.date, nowIso(), row.title);
+    }
+  } else if (existing) {
+    if (existing.approved_at && !isParent(user)) throw new PlannerError(409, 'Al goedgekeurd door papa of mama');
+    db.prepare('delete from external_done where rowid=?').run(existing.rowid);
   }
-  return externalCards(db, row.profile_id, row.date, addDays(row.date, 1)).find((c) => c.id === negativeId)!;
+  const card = externalCard(db, row);
+  return { ...card, needsApproval: card.points > 0 && !card.approved_at };
+}
+
+/** Sterren voor alle afspraken met deze titel op dit bord, of alleen voor deze ene keer. Alleen ouders. */
+export function setExternalPoints(db: Db, negativeId: number, points: number, scope: 'title' | 'once'): Card {
+  const row = getExternal(db, negativeId);
+  if (doneRow(db, row)?.approved_at) throw new PlannerError(409, 'Al goedgekeurd; de sterren staan vast');
+  if (scope === 'title') {
+    db.prepare('delete from external_points_once where profile_id=? and uid=? and date=?').run(row.profile_id, row.uid, row.date);
+    db.prepare('insert or replace into external_points(profile_id, title, points) values (?,?,?)').run(row.profile_id, row.title, points);
+  } else {
+    db.prepare('insert or replace into external_points_once(profile_id, uid, date, points) values (?,?,?,?)').run(row.profile_id, row.uid, row.date, points);
+  }
+  return externalCard(db, row);
+}
+
+/** Sterren die nu voor een afgevinkte afspraak gelden (nog niet vastgelegd). */
+function livePoints(db: Db, d: DoneRow): number {
+  const once = db.prepare('select points from external_points_once where profile_id=? and uid=? and date=?').get(d.profile_id, d.uid, d.date) as { points: number } | undefined;
+  if (once) return once.points;
+  const byTitle = db.prepare('select points from external_points where profile_id=? and title=?').get(d.profile_id, d.title) as { points: number } | undefined;
+  return byTitle?.points ?? 0;
+}
+
+export interface PendingExternal { doneId: number; profile_id: number; title: string; icon: string; date: string; points: number; done_at: string }
+
+/** Afgevinkte agenda-afspraken met sterren die op goedkeuring wachten. */
+export function pendingExternal(db: Db): PendingExternal[] {
+  const rows = db.prepare(
+    `select d.rowid, d.*, i.icon as icon_override from external_done d
+     left join external_icons i on i.profile_id = d.profile_id and i.title = d.title
+     where d.approved_at is null order by d.done_at`,
+  ).all() as unknown as (DoneRow & { icon_override: string | null })[];
+  return rows
+    .map((d) => ({ doneId: d.rowid, profile_id: d.profile_id, title: d.title, icon: d.icon_override ?? defaultIcon(d.title, false), date: d.date, points: livePoints(db, d), done_at: d.done_at }))
+    .filter((d) => d.points > 0);
+}
+
+function getDone(db: Db, doneId: number): DoneRow {
+  const d = db.prepare('select rowid, * from external_done where rowid=?').get(doneId) as DoneRow | undefined;
+  if (!d) throw new PlannerError(404, 'Afgevinkte afspraak niet gevonden');
+  return d;
+}
+
+/** Goedkeuren legt de sterren vast, zodat latere wijzigingen of een sync ze niet meer raken. */
+export function approveExternal(db: Db, parent: Profile, doneId: number): void {
+  const d = getDone(db, doneId);
+  db.prepare('update external_done set points=?, approved_at=?, approved_by=? where rowid=?').run(livePoints(db, d), nowIso(), parent.id, doneId);
+}
+
+export function rejectExternal(db: Db, doneId: number): void {
+  getDone(db, doneId);
+  db.prepare('delete from external_done where rowid=?').run(doneId);
+}
+
+/** Zelfde als approveExternal/rejectExternal, maar vanaf de kaart (negatieve id). */
+export function doneIdForCard(db: Db, negativeId: number): number {
+  const d = doneRow(db, getExternal(db, negativeId));
+  if (!d) throw new PlannerError(409, 'Afspraak is nog niet afgevinkt');
+  return d.rowid;
 }
 
 /** Icoon voor alle afspraken met deze titel op dit bord. */
@@ -262,7 +342,7 @@ export function setExternalIcon(db: Db, user: Profile, negativeId: number, icon:
   const row = getExternal(db, negativeId);
   if (!isParent(user) && row.profile_id !== user.id) throw new PlannerError(403, 'Dat is niet jouw bord');
   db.prepare('insert or replace into external_icons(profile_id, title, icon) values (?,?,?)').run(row.profile_id, row.title, icon);
-  return externalCards(db, row.profile_id, row.date, addDays(row.date, 1)).find((c) => c.id === negativeId)!;
+  return externalCard(db, row);
 }
 
 export interface SyncStatus { configured: boolean; calendars: string[]; lastSync: string | null; lastError: string | null; count: number; running: boolean }

@@ -224,3 +224,73 @@ describe('geïmporteerde afspraken: kleur, icoon, afvinken', () => {
     expect(defaultIcon('Studiedag school', true)).toBe('🏫');
   });
 });
+
+describe('sterren op agenda-afspraken', () => {
+  const zwem = (date: string) => ({ uid: 'z', profileId: 1, title: 'Zwemles', date, dayPart: 'middag' as const, time: '13:00', allDay: false, location: '' });
+  async function setup() {
+    storeEvents(db, [zwem('2026-09-14'), zwem('2026-09-21')], RANGE);
+    const app = appWith(db);
+    const sepp = as(app, await loginAs(app, 'Sepp'));
+    const papa = as(app, await loginAs(app, 'Papa'));
+    const week = async (start: string) => (await sepp.get(`/api/kids/1/week?start=${start}`)).body;
+    const zwemId = async (start: string) => (await week(start)).cards.find((c: any) => c.title === 'Zwemles').id as number;
+    return { sepp, papa, week, zwemId };
+  }
+
+  it('per titel voor alle keren, per keer overschrijft; alleen ouders', async () => {
+    const { sepp, papa, week, zwemId } = await setup();
+    const id14 = await zwemId('2026-09-14');
+    expect((await sepp.patch(`/api/cards/${id14}`, { points: 2, scope: 'title' })).status).toBe(403);
+    expect((await papa.patch(`/api/cards/${id14}`, { points: 2, scope: 'title' })).body.points).toBe(2);
+    expect((await week('2026-09-21')).cards[0].points).toBe(2);
+    expect((await papa.patch(`/api/cards/${id14}`, { points: 5, scope: 'once' })).body.points).toBe(5);
+    expect((await week('2026-09-21')).cards[0].points).toBe(2);
+    // weer per titel zetten haalt de uitzondering voor deze keer weg
+    await papa.patch(`/api/cards/${id14}`, { points: 3, scope: 'title' });
+    expect((await week('2026-09-14')).cards[0].points).toBe(3);
+  });
+
+  it('afvinken wacht op goedkeuring; saldo telt pas daarna; sterren staan vast na sync en wijziging', async () => {
+    const { sepp, papa, week, zwemId } = await setup();
+    const id = await zwemId('2026-09-14');
+    await papa.patch(`/api/cards/${id}`, { points: 2, scope: 'title' });
+    const d = await sepp.post(`/api/cards/${id}/done`);
+    expect(d.body.needsApproval).toBe(true);
+    expect((await week('2026-09-14')).balance).toBe(0);
+    const pending = (await papa.get('/api/approvals')).body.external;
+    expect(pending).toMatchObject([{ title: 'Zwemles', points: 2, date: '2026-09-14', profile: { name: 'Sepp' } }]);
+    expect((await papa.post(`/api/external-done/${pending[0].doneId}/approve`)).status).toBe(204);
+    expect((await week('2026-09-14')).balance).toBe(2);
+    expect((await papa.get('/api/approvals')).body.external).toEqual([]);
+    // kind kan niet meer ontvinken; ouder kan de sterren niet meer wijzigen
+    expect((await sepp.post(`/api/cards/${id}/undone`)).status).toBe(409);
+    expect((await papa.patch(`/api/cards/${id}`, { points: 9, scope: 'once' })).status).toBe(409);
+    // per-titel aanpassen raakt de goedgekeurde niet
+    await papa.patch(`/api/cards/${await zwemId('2026-09-21')}`, { points: 7, scope: 'title' });
+    storeEvents(db, [zwem('2026-09-21')], RANGE); // afspraak van de 14e is uit de agenda verdwenen
+    expect((await week('2026-09-14')).balance).toBe(2);
+  });
+
+  it('afwijzen zet terug op open; zonder sterren geen goedkeuring nodig', async () => {
+    const { sepp, papa, week, zwemId } = await setup();
+    const id = await zwemId('2026-09-14');
+    expect((await sepp.post(`/api/cards/${id}/done`)).body.needsApproval).toBe(false);
+    expect((await papa.get('/api/approvals')).body.external).toEqual([]);
+    await papa.patch(`/api/cards/${id}`, { points: 1, scope: 'once' });
+    const [p] = (await papa.get('/api/approvals')).body.external;
+    await papa.post(`/api/external-done/${p.doneId}/reject`);
+    expect((await week('2026-09-14')).cards[0].done_at).toBeNull();
+  });
+
+  it('goedkeuren vanaf de kaart', async () => {
+    const { sepp, papa, week, zwemId } = await setup();
+    const id = await zwemId('2026-09-14');
+    await papa.patch(`/api/cards/${id}`, { points: 4, scope: 'once' });
+    expect((await papa.post(`/api/cards/${id}/approve`)).status).toBe(409);
+    await sepp.post(`/api/cards/${id}/done`);
+    expect((await papa.post(`/api/cards/${id}/approve`)).status).toBe(204);
+    const c = (await week('2026-09-14')).cards[0];
+    expect(c.approved_at).toBeTruthy();
+    expect((await week('2026-09-14')).balance).toBe(4);
+  });
+});

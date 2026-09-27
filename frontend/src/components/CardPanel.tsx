@@ -23,6 +23,8 @@ export function celebrate() {
 export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props) {
   const external = !!card.source;
   const [pickingIcon, setPickingIcon] = useState(false);
+  const [settingStars, setSettingStars] = useState(false);
+  const [stars, setStars] = useState(card.points);
   const me = useSession()!.profile;
   const isParent = me.role === 'parent';
   const canEdit = isParent || card.created_by === me.id;
@@ -64,14 +66,25 @@ export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props)
             {error && <div className="error" style={{ marginBottom: 10 }}>{error}</div>}
             <div className="actions">
               {readOnly && <div className="status wait" style={{ flex: '1 1 100%' }}>🏠 Dit is iets van het hele gezin. Papa of mama beheert het.</div>}
-              {external && !readOnly && <div className="muted" style={{ flex: '1 1 100%', fontWeight: 700, fontSize: 14 }}> Uit de Apple-agenda: tijd en titel pas je daar aan. Hier kun je afvinken en het icoontje kiezen.</div>}
+              {external && !readOnly && <div className="muted" style={{ flex: '1 1 100%', fontWeight: 700, fontSize: 14 }}> Uit de Apple-agenda: tijd en titel pas je daar aan. Hier kun je afvinken en het icoontje kiezen{isParent ? ' en sterren geven' : ''}.</div>}
               {external && !readOnly && pickingIcon && (
                 <div style={{ flex: '1 1 100%' }}>
                   <IconPicker value={card.icon} onChange={(ic) => run(() => api.updateCard(card.id, { icon: ic }), () => setPickingIcon(false))} />
                 </div>
               )}
+              {external && !readOnly && settingStars && (
+                <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <button className="btn btn-small" onClick={() => setStars((n) => Math.max(0, n - 1))}>−</button>
+                  <span className="chip">⭐ {stars}</span>
+                  <button className="btn btn-small" onClick={() => setStars((n) => n + 1)}>+</button>
+                  <button className="btn btn-small" onClick={() => run(() => api.updateCard(card.id, { points: stars, scope: 'title' }), () => setSettingStars(false))}>Voor alle "{card.title}"</button>
+                  <button className="btn btn-small" onClick={() => run(() => api.updateCard(card.id, { points: stars, scope: 'once' }), () => setSettingStars(false))}>Alleen deze keer</button>
+                </div>
+              )}
               {!readOnly && status === 'open' && <button className="btn btn-good" onClick={() => run(() => api.done(card.id), celebrate)}>🎉 Klaar!</button>}
-              {!readOnly && external && status === 'done' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && external && (status === 'wait' || (status === 'done' && (isParent || !card.approved_at))) && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}
+              {!readOnly && external && status === 'wait' && isParent && <button className="btn btn-good" onClick={() => run(() => api.approveCard(card.id))}>✓ Goedkeuren</button>}
+              {!readOnly && external && isParent && !card.approved_at && <button className="btn" onClick={() => setSettingStars((v) => !v)}>{settingStars ? 'Sterren sluiten' : '⭐ Sterren'}</button>}
               {!readOnly && external && <button className="btn" onClick={() => setPickingIcon((v) => !v)}>{pickingIcon ? 'Icoontje sluiten' : '🎨 Icoontje kiezen'}</button>}
               {!isParent && !external && card.profile_id === me.id && status === 'open' && <button className="btn" onClick={() => go(`/hulp/${me.id}/nieuw/${card.id}`)}>💬 Hulp nodig?</button>}
               {!readOnly && !external && status === 'wait' && <button className="btn" onClick={() => run(() => api.undone(card.id))}>Toch niet klaar</button>}

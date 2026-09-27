@@ -4,6 +4,7 @@ import type { Db } from '../db.js';
 import { canAccess, requireAuth, requireParent, type AuthedRequest } from '../auth.js';
 import { PlannerError } from '../types.js';
 import { pendingCards } from '../services/cards.js';
+import { pendingExternal } from '../services/caldav.js';
 import { balance, reserved } from '../services/points.js';
 import { listProfiles } from '../services/profiles.js';
 import {
@@ -45,6 +46,7 @@ export function rewardRoutes(db: Db) {
     res.json({
       cards: pendingCards(db).map((c) => ({ ...c, profile: names.get(c.profile_id) })),
       redemptions: pendingRedemptions(db).map((x) => ({ ...x, profile: names.get(x.profile_id) })),
+      external: pendingExternal(db).map((x) => ({ ...x, profile: names.get(x.profile_id) })),
     });
   });
 
