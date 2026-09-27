@@ -17,3 +17,20 @@ services:
       - path: .env
         required: false
     restart: unless-stopped
+
+  # HTTPS op https://planner.mwevromans.nl (alleen thuisnetwerk). Poort 3000 blijft ook werken.
+  caddy:
+    build: ./caddy
+    image: planner-caddy:latest
+    container_name: planner-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data/caddy:/data
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      - planner
+    restart: unless-stopped

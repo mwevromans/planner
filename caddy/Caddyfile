@@ -1,0 +1,12 @@
+planner.mwevromans.nl {
+	tls {
+		dns acmedns {
+			username {$ACMEDNS_USERNAME}
+			password {$ACMEDNS_PASSWORD}
+			subdomain {$ACMEDNS_SUBDOMAIN}
+			server_url {$ACMEDNS_SERVER_URL}
+		}
+		resolvers 1.1.1.1
+	}
+	reverse_proxy planner:3000
+}

@@ -20,6 +20,11 @@ docker compose up -d --build
 
 Open `http://<host>:3000`. De database staat in `./data/planner.db`.
 
+Met https: `https://planner.mwevromans.nl` (alleen thuisnetwerk). De container `caddy`
+haalt het certificaat via DNS op bij Let's Encrypt: `_acme-challenge.planner` is een
+CNAME naar een acme-dns-account, met de gegevens in `.env` (`ACMEDNS_*`). Safari op de
+iPad geeft dan geen waarschuwing meer, en microfoon en voorlezen werken betrouwbaar.
+
 Eerste keer: profielen Sepp, Liz, Papa en Mama staan klaar, plus het vaste profiel
 **Gezin** 🏠 voor familie-evenementen (verjaardagen, vakantie, uitjes). Kaarten op
 Gezin staan op ieders bord, alleen te bekijken. Ouders hebben ook een eigen bord.
