@@ -37,7 +37,9 @@ export function listen(onText: (text: string, final: boolean) => void, onDone: (
 export function speak(text: string, onEnd?: () => void): () => void {
   if (!('speechSynthesis' in window)) { onEnd?.(); return () => undefined; }
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, ''));
+  // "2x3" of "2 × 3" als "2 keer 3", anders zegt de stem "2 ix 3".
+  const spoken = text.replace(/(\d)\s*[x×*]\s*(?=\d)/gi, '$1 keer ').replace(/[*_#`]/g, '');
+  const u = new SpeechSynthesisUtterance(spoken);
   u.lang = 'nl-NL'; u.rate = 0.95;
   const nl = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('nl'));
   if (nl) u.voice = nl;
