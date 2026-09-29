@@ -88,6 +88,19 @@ h1, h2, h3 { margin: 0; }
 .cell.past { opacity: .75; }
 .cell.over { border-color: var(--accent); background: #fdf2f8; }
 
+/* Weekbord past op één scherm: de dagdelen delen de hoogte, kop en stapel blijven in beeld */
+.screen.fit { height: 100dvh; min-height: 0; overflow: hidden; }
+.screen.fit .board-scroll { display: flex; flex-direction: column; min-height: 0; }
+.screen.fit .board { flex: 1; min-height: 0; grid-template-rows: auto repeat(4, minmax(0, 1fr)); }
+.screen.fit .cell { min-height: 0; overflow-y: auto; }
+/* Vol vak: compacte kaarten, één regel */
+.cell.crowded { gap: 4px; padding: 4px; }
+.cell.crowded .card, .density-simple .cell.crowded .card { min-height: 0; padding: 4px 8px; gap: 6px; flex-direction: row; align-items: center; text-align: left; justify-content: flex-start; }
+.cell.crowded .card .icon, .density-simple .cell.crowded .card .icon { font-size: 20px; }
+.cell.crowded .card .title, .density-simple .cell.crowded .card .title { font-size: 12px; -webkit-line-clamp: 1; }
+.cell.crowded .card .meta, .density-simple .cell.crowded .card .meta { font-size: 11px; justify-content: flex-start; }
+.cell.crowded .card .meta .clock svg, .density-simple .cell.crowded .card .meta .clock svg { width: 12px; height: 12px; }
+
 /* Kaart */
 .card {
   border-radius: 14px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; text-align: left;

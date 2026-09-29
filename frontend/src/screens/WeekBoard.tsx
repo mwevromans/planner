@@ -14,10 +14,12 @@ import { useToast } from '../components/Toast';
 import { addDays, DOW, dom, today, weekLabel, weekStart } from '../dates';
 import { DAY_PARTS, DAY_PART_LABEL, type Card, type DayPart, type Profile, type WeekView } from '../types';
 
-function Cell({ date, part, cards, family, onTap, isToday, isPast }: { date: string; part: DayPart; cards: Card[]; family: Card[]; onTap: (c: Card) => void; isToday: boolean; isPast: boolean }) {
+function Cell({ date, part, cards, family, onTap, isToday, isPast, crowdedAt }: { date: string; part: DayPart; cards: Card[]; family: Card[]; onTap: (c: Card) => void; isToday: boolean; isPast: boolean; crowdedAt: number }) {
   const { setNodeRef, isOver } = useDroppable({ id: `cell:${date}|${part}` });
+  // Vol vak: kaarten compacter, zodat de hele week op één scherm blijft.
+  const crowded = cards.length + family.length >= crowdedAt;
   return (
-    <div ref={setNodeRef} className={`cell ${isToday ? 'today' : ''} ${isPast ? 'past' : ''} ${isOver ? 'over' : ''}`}>
+    <div ref={setNodeRef} className={`cell ${isToday ? 'today' : ''} ${isPast ? 'past' : ''} ${isOver ? 'over' : ''} ${crowded ? 'crowded' : ''}`}>
       {family.map((c) => <CardView key={`f${c.id}`} card={c} onTap={onTap} draggable={false} family />)}
       {cards.map((c) => <CardView key={c.id} card={c} onTap={onTap} />)}
     </div>
@@ -96,7 +98,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
   if (!profile) return <div className="center muted">Laden…</div>;
 
   return (
-    <div className={`screen density-${profile.density}`}>
+    <div className={`screen fit density-${profile.density}`}>
       <Header profile={profile} balance={week?.balance} streak={week?.streak} onProfileChanged={setProfile}>
         <div className="weeknav">
           <button className="icon-btn" onClick={() => setStart(addDays(start, -7))} aria-label="Vorige week">‹</button>
@@ -120,7 +122,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
                 </div>
               ))}
               {DAY_PARTS.map((part) => (
-                <DayPartRow key={part} part={part} days={days} byCell={byCell} familyByCell={familyByCell} today={t} onTap={setOpen} />
+                <DayPartRow key={part} part={part} days={days} byCell={byCell} familyByCell={familyByCell} today={t} onTap={setOpen} crowdedAt={profile.density === 'simple' ? 2 : 3} />
               ))}
             </div>
           </div>
@@ -142,7 +144,7 @@ export function WeekBoard({ kidId }: { kidId: number }) {
   );
 }
 
-function DayPartRow({ part, days, byCell, familyByCell, today, onTap }: { part: DayPart; days: string[]; byCell: Map<string, Card[]>; familyByCell: Map<string, Card[]>; today: string; onTap: (c: Card) => void }) {
+function DayPartRow({ part, days, byCell, familyByCell, today, onTap, crowdedAt }: { part: DayPart; days: string[]; byCell: Map<string, Card[]>; familyByCell: Map<string, Card[]>; today: string; onTap: (c: Card) => void; crowdedAt: number }) {
   return (
     <>
       <div className="part-head">
@@ -150,7 +152,7 @@ function DayPartRow({ part, days, byCell, familyByCell, today, onTap }: { part: 
         <span>{DAY_PART_LABEL[part].label}</span>
       </div>
       {days.map((d) => (
-        <Cell key={d} date={d} part={part} cards={byCell.get(`${d}|${part}`) ?? []} family={familyByCell.get(`${d}|${part}`) ?? []} onTap={onTap} isToday={d === today} isPast={d < today} />
+        <Cell key={d} date={d} part={part} cards={byCell.get(`${d}|${part}`) ?? []} family={familyByCell.get(`${d}|${part}`) ?? []} onTap={onTap} isToday={d === today} isPast={d < today} crowdedAt={crowdedAt} />
       ))}
     </>
   );
