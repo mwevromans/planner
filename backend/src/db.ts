@@ -88,6 +88,9 @@ create table if not exists external_done(
   approved_by integer,
   primary key(profile_id, uid, date)
 );
+create table if not exists family_hidden(
+  title text primary key
+);
 create table if not exists external_points(
   profile_id integer not null,
   title text not null,

@@ -21,6 +21,19 @@ const PART_RANK: Record<string, number> = { ochtend: 1, middag: 2, namiddag: 3, 
 
 /** Eigen kaarten plus alleen-lezen afspraken uit de gekoppelde agenda, op dag, dagdeel en tijd. */
 export function cardsForRange(db: Db, profileId: number, from: string, toExclusive: string): Card[] {
+  const cards = ownAndExternal(db, profileId, from, toExclusive);
+  if (profileId !== familyProfileId(db)) return cards;
+  const hidden = new Set((db.prepare('select title from family_hidden').all() as { title: string }[]).map((r) => r.title));
+  return cards.map((c) => ({ ...c, kids_hidden: hidden.has(c.title) }));
+}
+
+/** Gezinsafspraak met deze titel wel of niet tonen op de borden van de kinderen. */
+export function setFamilyHidden(db: Db, title: string, hidden: boolean): void {
+  if (hidden) db.prepare('insert or ignore into family_hidden(title) values (?)').run(title);
+  else db.prepare('delete from family_hidden where title=?').run(title);
+}
+
+function ownAndExternal(db: Db, profileId: number, from: string, toExclusive: string): Card[] {
   const own = db
     .prepare(`select * from cards where profile_id=? and skipped=0 and planned_date >= ? and planned_date < ? ${ORDER}`)
     .all(profileId, from, toExclusive) as unknown as Card[];
@@ -47,7 +60,7 @@ export function getWeek(db: Db, profileId: number, weekStart: string): WeekView 
     weekStart,
     cards: cardsForRange(db, profileId, weekStart, addDays(weekStart, 7)),
     stack: stackFor(db, profileId),
-    family: fam === profileId ? [] : cardsForRange(db, fam, weekStart, addDays(weekStart, 7)),
+    family: fam === profileId ? [] : cardsForRange(db, fam, weekStart, addDays(weekStart, 7)).filter((c) => !c.kids_hidden),
     balance: balance(db, profileId),
     streak: streak(db, profileId, today()),
   };

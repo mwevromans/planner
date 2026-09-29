@@ -61,6 +61,7 @@ export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props)
               {card.points > 0 && <span className="chip">⭐ {card.points} punten</span>}
               {card.recurrence_id && <span className="chip">🔁 Elke week</span>}
               {card.source && <span className="chip"> Apple-agenda</span>}
+              {card.kids_hidden && <span className="chip">🙈 Niet bij de kinderen</span>}
             </div>
             {card.notes && <p style={{ whiteSpace: 'pre-wrap', fontWeight: 600 }}>{card.notes}</p>}
             {error && <div className="error" style={{ marginBottom: 10 }}>{error}</div>}
@@ -95,6 +96,11 @@ export function CardPanel({ card, onClose, onChanged, readOnly = false }: Props)
               {!readOnly && !external && canEdit && <button className="btn" onClick={() => setEditing(true)}>✏️ Aanpassen</button>}
               {!readOnly && !external && <button className="btn" onClick={() => setCopying(true)}>📋 Kopie</button>}
               {!readOnly && !external && canEdit && <button className="btn btn-bad" onClick={() => { if (confirm(`"${card.title}" weggooien?`)) run(() => api.deleteCard(card.id), onClose); }}>🗑️ Weg</button>}
+              {!readOnly && isParent && card.kids_hidden !== undefined && (
+                <button className="btn" onClick={() => run(() => api.setFamilyHidden(card.title, !card.kids_hidden), onClose)}>
+                  {card.kids_hidden ? '👀 Wel tonen bij de kinderen' : '🙈 Niet tonen bij de kinderen'}
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: '1 1 100%' }}>Sluiten</button>
             </div>
           </>

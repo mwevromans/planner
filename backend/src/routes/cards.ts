@@ -9,6 +9,7 @@ import {
   approveExternal, doneIdForCard, rejectExternal, setExternalDone, setExternalIcon, setExternalPoints,
 } from '../services/caldav.js';
 import { isParent } from '../auth.js';
+import { setFamilyHidden } from '../services/week.js';
 import { z } from 'zod';
 import { PlannerError } from '../types.js';
 
@@ -49,6 +50,11 @@ export function cardRoutes(db: Db) {
     res.json(approveCard(db, user(req), idParam(req)));
   });
   r.post('/cards/:id/reject', requireParent, (req, res) => res.json(rejectCard(db, user(req), idParam(req))));
+  r.post('/family-hidden', requireParent, (req, res) => {
+    const { title, hidden } = z.object({ title: z.string().min(1).max(200), hidden: z.boolean() }).parse(req.body);
+    setFamilyHidden(db, title, hidden);
+    res.status(204).end();
+  });
   r.post('/external-done/:id/approve', requireParent, (req, res) => { approveExternal(db, user(req), idParam(req)); res.status(204).end(); });
   r.post('/external-done/:id/reject', requireParent, (req, res) => { rejectExternal(db, idParam(req)); res.status(204).end(); });
 

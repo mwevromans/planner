@@ -34,6 +34,7 @@ export const api = {
   undone: (id: number) => call<Card>('POST', `/cards/${id}/undone`),
   approveCard: (id: number) => call<Card>('POST', `/cards/${id}/approve`),
   rejectCard: (id: number) => call<Card>('POST', `/cards/${id}/reject`),
+  setFamilyHidden: (title: string, hidden: boolean) => call<void>('POST', '/family-hidden', { title, hidden }),
   approveExternal: (doneId: number) => call<void>('POST', `/external-done/${doneId}/approve`),
   rejectExternal: (doneId: number) => call<void>('POST', `/external-done/${doneId}/reject`),
 

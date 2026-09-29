@@ -40,6 +40,8 @@ export interface Card {
   created_at: string;
   /** Gezet voor alleen-lezen kaarten uit een gekoppelde agenda. */
   source?: 'apple';
+  /** Alleen op Gezin-kaarten: titel is verborgen op de borden van de kinderen. */
+  kids_hidden?: boolean;
 }
 
 export interface Recurrence {

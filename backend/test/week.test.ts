@@ -103,3 +103,25 @@ describe('streak', () => {
   });
   it('lege agenda is 0', () => expect(streak(db, 1, T)).toBe(0));
 });
+
+describe('gezinsafspraken verbergen voor de kinderen', () => {
+  it('per titel: weg bij het kind, blijft bij Gezin; alleen ouders; weer aanzetten kan', async () => {
+    const { storeEvents } = await import('../src/services/caldav.js');
+    const fam = (db.prepare("select id from profiles where role='family'").get() as { id: number }).id;
+    const ev = (uid: string, title: string, date: string) => ({ uid, profileId: fam, title, date, dayPart: 'ochtend' as const, time: null, allDay: true, location: '' });
+    storeEvents(db, [ev('k', 'Kinderbijslag', '2026-09-08'), ev('o', 'Oma jarig', '2026-09-09')], { from: '2026-09-01', toExclusive: '2026-10-01' });
+    const kidFamily = async () => (await sepp.get(`/api/kids/1/week?start=${WEEK}`)).body.family.map((c: any) => c.title);
+    const gezin = async () => (await papa.get(`/api/kids/${fam}/week?start=${WEEK}`)).body.cards;
+    expect(await kidFamily()).toEqual(['Kinderbijslag', 'Oma jarig']);
+    expect((await gezin()).every((c: any) => c.kids_hidden === false)).toBe(true);
+
+    expect((await sepp.post('/api/family-hidden', { title: 'Kinderbijslag', hidden: true })).status).toBe(403);
+    expect((await papa.post('/api/family-hidden', { title: 'Kinderbijslag', hidden: true })).status).toBe(204);
+    expect(await kidFamily()).toEqual(['Oma jarig']);
+    const g = await gezin();
+    expect(g.map((c: any) => [c.title, c.kids_hidden])).toEqual([['Kinderbijslag', true], ['Oma jarig', false]]);
+
+    await papa.post('/api/family-hidden', { title: 'Kinderbijslag', hidden: false });
+    expect(await kidFamily()).toEqual(['Kinderbijslag', 'Oma jarig']);
+  });
+});
