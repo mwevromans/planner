@@ -33,7 +33,15 @@ describe('overzicht en summary (publiek)', () => {
     await papa.post('/api/cards', { title: 'B', icon: '📖', color: '#fde68a', profileId: 1, plannedDate: t, dayPart: 'avond' });
     await sepp.post(`/api/cards/${a}/done`);
     const r = await request(app).get('/api/kids/1/summary');
-    expect(r.body).toEqual({ name: 'Sepp', balance: 0, streak: 0, todayTotal: 2, todayDone: 1, pendingApprovals: 1 });
+    expect(r.body).toEqual({ name: 'Sepp', balance: 0, streak: 0, todayTotal: 2, todayDone: 1, pendingApprovals: 1, toPlan: 0, firstDeadline: null });
+  });
+  it('summary telt wat nog op de stapel ligt, met de eerste deadline', async () => {
+    await papa.post('/api/cards', { title: 'Spreekbeurt', icon: '🎤', color: '#fde68a', profileId: 1, deadline: '2026-11-20' });
+    await papa.post('/api/cards', { title: 'Topo', icon: '🗺️', color: '#fde68a', profileId: 1, deadline: '2026-11-06' });
+    await papa.post('/api/cards', { title: 'Kamer', icon: '🧹', color: '#fde68a', profileId: 1 });
+    await papa.post('/api/cards', { title: 'Lezen', icon: '📖', color: '#fde68a', profileId: 2 });
+    const r = await request(app).get('/api/kids/1/summary');
+    expect(r.body).toMatchObject({ toPlan: 3, firstDeadline: '2026-11-06' });
   });
   it('ongeldige datum 400, onbekend kind 404', async () => {
     expect((await request(app).get('/api/overview?date=gisteren')).status).toBe(400);

@@ -5,7 +5,7 @@ import { publicProfile } from '../auth.js';
 import { balance, streak } from './points.js';
 import { getProfile, listProfiles } from './profiles.js';
 import { materializeWeek } from './recurrences.js';
-import { cardsForRange } from './week.js';
+import { cardsForRange, stackFor } from './week.js';
 
 const ROLE_ORDER = { family: 0, kid: 1, parent: 2 } as const;
 
@@ -47,6 +47,7 @@ export function summary(db: Db, kidId: number, today: string) {
   const pending = (db
     .prepare('select count(*) as n from cards where profile_id=? and done_at is not null and approved_at is null and points>0 and skipped=0')
     .get(kid.id) as { n: number }).n;
+  const stack = stackFor(db, kid.id).filter((c) => !c.done_at);
   return {
     name: kid.name,
     balance: balance(db, kid.id),
@@ -54,5 +55,7 @@ export function summary(db: Db, kidId: number, today: string) {
     todayTotal: cards.length,
     todayDone: cards.filter((c) => c.done_at).length,
     pendingApprovals: pending,
+    toPlan: stack.length,
+    firstDeadline: stack.find((c) => c.deadline)?.deadline ?? null,
   };
 }
