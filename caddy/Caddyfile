@@ -8,5 +8,13 @@ planner.mwevromans.nl {
 		}
 		resolvers 1.1.1.1
 	}
-	reverse_proxy planner:3000
+	# De Vroompies Courant (python -m courant serve op de host, :8686), zodat Safari op de iPad
+	# geen https-poging en waarschuwing meer doet. Alle links in de krant zijn relatief.
+	redir /courant /courant/
+	handle_path /courant/* {
+		reverse_proxy host.docker.internal:8686
+	}
+	handle {
+		reverse_proxy planner:3000
+	}
 }
